@@ -1,6 +1,5 @@
 const config = {
   verbose: true,
-  // eslint-disable-next-line no-undef
   rootDir: __dirname,
   transform: { "^.+\\.ts$": "ts-jest" },
   testEnvironment: "node",
@@ -13,5 +12,4 @@ const config = {
   watchman: false,
 };
 
-// eslint-disable-next-line no-undef
 module.exports = config;

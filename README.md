@@ -31,10 +31,11 @@ Documentation [here](https://decaf-ts.github.io/ts-workspace/), Test results [he
 
 ### Description
 
-No one needs the hassle of setting up new repos every time.
+`@decaf-ts/docaf` is a Decaf-native, framework-independent documentation generator and runtime — a port of [BetterDocs](https://github.com/SoftwareBrothers/better-docs) onto Decaf models.
 
-Now you can create new repositories from this template and enjoy having everything set up for you.
+It extracts TypeScript sources with a single compiler program, publishes the documentation as data-only Decaf models (`DocletModel`, `DocPageModel`, `DocSectionModel`, ...) backed by `RamAdapter` repositories, and writes a portable, target-independent snapshot to `.decaf-docs/snapshot.json`. Renderer targets (currently Angular) build user-facing output from that snapshot in an isolated staging directory and never mutate it — no BetterDocs, JSDoc, TAFFY or HTML rendering runs at runtime.
 
+The package ships a `decaf docs` cli-module for `@decaf-ts/cli` (`init`, `snapshot`, `build`) and a Docker image that runs the same CLI against mounted source and output folders.
 
 
 ### How to Use
@@ -50,6 +51,28 @@ Now you can create new repositories from this template and enjoy having everythi
   - [VSCode(ium)](./workdocs/tutorials/For%20Developers.md#visual-studio-code-vscode)
   - [WebStorm](./workdocs/tutorials/For%20Developers.md#webstorm)
 - [Considerations](./workdocs/tutorials/For%20Developers.md#considerations)
+
+### Installation
+
+Install as a regular dependency of the project whose sources you want to document (no npm-link required):
+
+```bash
+npm install @decaf-ts/docaf
+```
+
+Requirements:
+
+- Node.js >= 20 and npm >= 10
+- `@decaf-ts/cli`, which discovers `@decaf-ts/docaf` as a cli-module and exposes it as `decaf docs ...`
+- a `tsconfig.json` covering the documented sources
+
+### Documentation CLI
+
+`decaf docs init`, `decaf docs snapshot` and `decaf docs build` extract the sources, publish the data-only documentation, write the portable snapshot and build the configured renderer targets. Flags (`--config`, `--renderer`, `--targets`), the `decafdocs.config.ts` shape, defaults, caching and `DOCAF_*` diagnostics are documented in [CLI.md](./CLI.md).
+
+### Docker
+
+A container image runs the same `decaf docs` CLI as a non-root user against mounted source and output folders. Image build (including the BuildKit token secret), `docker run` usage, mount and permission notes, the smoke script, and the CSP/hosting recommendation are documented in [DOCKER.md](./DOCKER.md).
 
 
 
@@ -93,4 +116,3 @@ So if you can, if this project in any way. either by learning something or simpl
 This project is released under the [MIT License](./LICENSE.md).
 
 By developers, for developers...
-> CI note: shared workflows come from [decaf-ts/reusable-actions](https://github.com/decaf-ts/reusable-actions) (see `workdocs/tutorials/For Developers.md`).

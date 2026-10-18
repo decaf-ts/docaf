@@ -1,0 +1,10 @@
+{
+  "fixtureRoot": "tests/fixtures/parity/common",
+  "fixtures": [
+    "models.ts",
+    "contracts.ts",
+    "imported.ts",
+    "loaded.ts",
+    "widget.component.ts"
+  ]
+}

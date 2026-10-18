@@ -1,45 +1,78 @@
+# syntax=docker/dockerfile:1.7
+
+# Docker deliverable for @decaf-ts/docaf.
+#
+# The runtime image contains the built docaf package next to the public
+# @decaf-ts/cli binary. `CliWrapper` discovers @decaf-ts/docaf as a sibling
+# package under the global node_modules scope, so the image exposes
+# `decaf docs ...` without npm-link or a project-local install.
+#
+# Build:
+#   docker build -t decaf-ts/docaf:latest .
+# Optional private-registry auth (never baked into a layer):
+#   DOCKER_BUILDKIT=1 docker build --secret id=TOKEN,env=NPM_TOKEN -t decaf-ts/docaf:latest .
+
 ARG NODE_VERSION=22
 
-FROM node:${NODE_VERSION:-22}-alpine as builder
+FROM node:${NODE_VERSION}-bookworm-slim AS builder
 
-RUN apk update && apk upgrade
+ENV CI=true
+WORKDIR /opt/docaf
 
-ENV WORKDIR="ts-workspace"
+# build-scripts reads git metadata when available and warns when git is absent.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY ./bin/ $WORKDIR/bin/
-COPY ./src/ $WORKDIR/src/
-COPY ./tests/ $WORKDIR/tests/
-COPY ./workdocs/reports $WORKDIR/workdocs/reports
-COPY ./package*.json $WORKDIR/
-COPY ./.mpmrc $WORKDIR/
+COPY package.json package-lock.json ./
 
-# Install the dependencies from package-lock.json
-# Make the workfolder available to the the 'node' user. The `node` user is built in the Node image.
-RUN --mount=type=secret,id=TOKEN TOKEN=$(cat /run/secrets/TOKEN) npm ci && npm cache clean --force && chown -R node:node .
+# Public registry installs are the default. When the build needs an npm token
+# (for example a private mirror), pass it as a BuildKit secret; it is written
+# only inside this RUN step and removed before the layer is committed.
+RUN --mount=type=secret,id=TOKEN,required=false \
+    set -eux; \
+    if [ -s /run/secrets/TOKEN ]; then \
+      printf '//registry.npmjs.org/:_authToken=%s\n' "$(cat /run/secrets/TOKEN)" > .npmrc; \
+    fi; \
+    npm ci --no-audit --no-fund; \
+    rm -f .npmrc
 
-FROM node:${NODE_VERSION:-22}-alpine AS production
+COPY tsconfig.json ./
+COPY src ./src
 
-RUN apk update && apk upgrade
-RUN apk --no-cache add htop less grep && apk add --no-cache --upgrade bash # optional but useful
+RUN npm run build \
+    && npm prune --omit=dev --no-audit --no-fund \
+    && rm -rf src tests tmp workdocs
 
-ENV WORKDIR="ts-workspace"
+FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 
-ENV NODE_ENV="production"
+ARG DECAF_CLI_VERSION=0.13.2
+ARG DECAF_UTILS_VERSION=1.11.1
 
-#COPY --from=builder --chown=node:node $WORKDIR/dist $WORKDIR/ #one or the other usually
-COPY --from=builder --chown=node:node $WORKDIR/lib $WORKDIR/lib/
-COPY --from=builder --chown=node:node $WORKDIR/package*.json $WORKDIR/
+# @decaf-ts/utils is installed explicitly because the published @decaf-ts/cli
+# 0.13.2 declares it as neither a dependency nor a peer dependency, although
+# its slogans module requires it at runtime.
+RUN npm install -g --no-audit --no-fund \
+      "@decaf-ts/cli@${DECAF_CLI_VERSION}" \
+      "@decaf-ts/utils@${DECAF_UTILS_VERSION}" \
+    && npm cache clean --force
+
+# A real directory (not a symlink) so CliWrapper's sibling-package crawl sees
+# it. The package ships its own pruned node_modules, including the Angular
+# renderer toolchain that `decaf docs build` reuses.
+COPY --from=builder /opt/docaf /usr/local/lib/node_modules/@decaf-ts/docaf
+
+ENV NODE_ENV=production \
+    CI=true \
+    NG_CLI_ANALYTICS=false
 
 USER node
 
-WORKDIR $WORKDIR
+WORKDIR /workspace
 
-# Install the dependencies from package-lock.json
-# Make the workfolder available to the the 'node' user. The `node` user is built in the Node image.
-RUN --mount=type=secret,id=TOKEN TOKEN=$(cat /run/secrets/TOKEN) npm ci && npm cache clean --force && chown -R node:node .
+# `docker run <image> build --config ...` => `decaf docs build --config ...`
+ENTRYPOINT ["decaf", "docs"]
 
-
-ENTRYPOINT ["node", "lib/cli.cjs"]
-
-LABEL name="TS Workspace" description="Template Dockerfile for typescript projects"
-
+LABEL org.opencontainers.image.title="@decaf-ts/docaf" \
+      org.opencontainers.image.description="Decaf documentation generator CLI (decaf docs build/snapshot/init)" \
+      org.opencontainers.image.licenses="MIT"

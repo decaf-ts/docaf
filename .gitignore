@@ -1,6 +1,6 @@
 /lib
 /dist
-/docs
+/docs/*
 /workdocs/drawings/*
 !/workdocs/drawings/*.drawio
 /workdocs/resources/*
@@ -20,3 +20,4 @@
 /.confluence-token
 /node_modules
 !.gitkeep
+/.decaf-docs

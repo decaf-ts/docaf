@@ -1,8 +1,35 @@
-./**/*
-!./*.json
-!src/*
-!tests/*
-!workdocs/*
-!./.npmrc
-!gulpfile.js
-!jest.config.ts
+# Source is installed and built inside the image; do not copy host artifacts.
+node_modules
+node_modules/**
+lib
+dist
+tmp
+docs
+coverage
+.pgddl-scratch
+
+# Tooling / editor / VCS state
+.git
+.gitignore
+.github
+.gitlab-ci.yml
+.idea
+.vscode
+.run
+*.log
+
+# Local credentials and generated reports
+.npmtoken
+.dockertoken
+.dockeruser
+.token
+.confluence-token
+workdocs/reports
+workdocs/resources
+workdocs/drawings
+workdocs/uml
+
+# Tests and fixtures are not part of the image; docker-smoke.sh mounts a
+# fixture project from the host instead.
+tests
+jest.config.cjs

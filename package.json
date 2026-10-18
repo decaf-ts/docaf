@@ -1,13 +1,64 @@
 {
-  "name": "@decaf-ts/ts-workspace",
-  "version": "3.10.25",
-  "description": "template for ts projects",
+  "name": "@decaf-ts/docaf",
+  "version": "0.1.0",
+  "description": "Decaf-native, framework-independent documentation generator and runtime (BetterDocs port)",
   "type": "module",
   "exports": {
-    "types": "./lib/types/index.d.ts",
-    "import": "./lib/esm/index.js",
-    "require": "./lib/cjs/index.cjs",
-    "default": "./lib/esm/index.js"
+    ".": {
+      "import": {
+        "types": "./lib/types/index.d.mts",
+        "default": "./lib/esm/index.js"
+      },
+      "require": {
+        "types": "./lib/types/index.d.cts",
+        "default": "./lib/cjs/index.cjs"
+      },
+      "default": "./lib/esm/index.js"
+    },
+    "./ui": {
+      "import": {
+        "types": "./lib/types/ui/index.d.mts",
+        "default": "./lib/esm/ui/index.js"
+      },
+      "require": {
+        "types": "./lib/types/ui/index.d.cts",
+        "default": "./lib/cjs/ui/index.cjs"
+      },
+      "default": "./lib/esm/ui/index.js"
+    },
+    "./for-angular": {
+      "import": {
+        "types": "./lib/types/for-angular/index.d.mts",
+        "default": "./lib/esm/for-angular/index.js"
+      },
+      "require": {
+        "types": "./lib/types/for-angular/index.d.cts",
+        "default": "./lib/cjs/for-angular/index.cjs"
+      },
+      "default": "./lib/esm/for-angular/index.js"
+    },
+    "./build": {
+      "import": {
+        "types": "./lib/types/build/index.d.mts",
+        "default": "./lib/esm/build/index.js"
+      },
+      "require": {
+        "types": "./lib/types/build/index.d.cts",
+        "default": "./lib/cjs/build/index.cjs"
+      },
+      "default": "./lib/esm/build/index.js"
+    },
+    "./cli": {
+      "import": {
+        "types": "./lib/types/cli/index.d.mts",
+        "default": "./lib/esm/cli/index.js"
+      },
+      "require": {
+        "types": "./lib/types/cli/index.d.cts",
+        "default": "./lib/cjs/cli/index.cjs"
+      },
+      "default": "./lib/esm/cli/index.js"
+    }
   },
   "main": "./lib/cjs/index.cjs",
   "module": "./lib/esm/index.js",
@@ -30,6 +81,9 @@
     "test:unit": "jest --testPathPatterns=\"/tests/unit\" --passWithNoTests --detectOpenHandles",
     "test:integration": "jest --testPathPatterns=\"/tests/(integration)\" --passWithNoTests --detectOpenHandles",
     "test:all": "jest --testPathPatterns=\"/tests\" --passWithNoTests --detectOpenHandles",
+    "test:parity": "node scripts/parity/check.mjs",
+    "parity:baseline": "node scripts/parity/generate-baseline.mjs",
+    "test:e2e": "npm run build && node --experimental-strip-types tests/e2e/docs-angular-static-app.e2e.ts",
     "test:dist": "TEST_TARGET=lib npm run test:all && TEST_TARGET=dist npm run test:all",
     "test:circular": "dpdm -T --no-warning --no-tree ./src/index.ts",
     "prepare-it-tests": "echo \"prepare-it-tests: no infra to boot\"",
@@ -46,7 +100,7 @@
     "repo:pr": "npm run repo:doc && npm run repo:tests && npm run repo:readme",
     "drawings": "for FILE in workdocs/drawings/*.drawio; do echo \"converting $FILE to image...\" && docker run --rm -v $(pwd):/data rlespinasse/drawio-export --format png $FILE; done && cp -rf workdocs/drawings/export/* workdocs/resources/",
     "uml": "cd workdocs/uml && for FILE in ./*.puml; do docker run --rm -v $(pwd):/work -w /work miy4/plantuml -DPLANTUML_LIMIT_SIZE=8192 -tpng $FILE; done && cd ../.. && cp -fr workdocs/uml/*.png workdocs/resources/",
-    "docs": "npx rimraf ./docs && mkdir docs && build-scripts --docs",
+    "docs": "npx rimraf ./docs && mkdir docs && NODE_ENV=development build-scripts --docs",
     "publish-docs": "docker run -it --rm --user $(id -u):$(id -g) -v \"$(pwd)/workdocs/confluence:/content\" -e ATLASSIAN_API_TOKEN=\"$(DECAF_BANNER=false decaf utils credentials get --name confluence --logLevel error)\" ghcr.io/markdown-confluence/publish:latest",
     "docker:login": "docker login ghcr.io -u \"$(DECAF_BANNER=false decaf utils credentials get --name docker-user --legacy-file .dockeruser --logLevel error)\" -p \"$(DECAF_BANNER=false decaf utils credentials get --name docker --legacy-file .dockertoken --logLevel error)\"",
     "docker:build": "npm run docker:build-base",
@@ -56,7 +110,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/decaf-ts/ts-workspace.git"
+    "url": "git+https://github.com/decaf-ts/docaf.git"
   },
   "engines": {
     "node": ">=20.0.0",
@@ -67,33 +121,81 @@
     "dist"
   ],
   "keywords": [
-    "plantuml",
-    "mermaid",
-    "uml",
-    "drawio",
-    "mddocs",
-    "md",
-    "jsdoc",
-    "doc",
-    "docs",
+    "decaf",
     "documentation",
-    "test",
-    "reports",
-    "confluence",
-    "ci/cd",
-    "ci",
-    "cd",
-    "template",
+    "docs",
+    "jsdoc",
+    "doclet",
+    "generator",
+    "renderer",
     "typescript",
     "ts"
   ],
   "author": "Tiago Venceslau",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/decaf-ts/ts-workspace/issues"
+    "url": "https://github.com/decaf-ts/docaf/issues"
   },
-  "homepage": "https://github.com/decaf-ts/ts-workspace#readme",
+  "homepage": "https://github.com/decaf-ts/docaf#readme",
+  "dependencies": {
+    "@angular/animations": "^21.2.25",
+    "@angular/build": "^21.2.27",
+    "@angular/cli": "^21.2.27",
+    "@angular/common": "^21.2.25",
+    "@angular/compiler": "^21.2.25",
+    "@angular/compiler-cli": "^21.2.25",
+    "@angular/core": "^21.2.25",
+    "@angular/forms": "^21.2.25",
+    "@angular/platform-browser": "^21.2.25",
+    "@angular/platform-browser-dynamic": "^21.2.25",
+    "@angular/router": "^21.2.25",
+    "@bwip-js/browser": "^4.11.4",
+    "@cortex-js/compute-engine": "^0.147.0",
+    "@decaf-ts/as-graph": "^0.6.0",
+    "@decaf-ts/core": "0.32.4",
+    "@decaf-ts/db-decorators": "0.19.5",
+    "@decaf-ts/decoration": "0.19.3",
+    "@decaf-ts/decorator-validation": "1.23.3",
+    "@decaf-ts/for-angular": "^0.10.0",
+    "@decaf-ts/for-http": "^0.21.1",
+    "@decaf-ts/injectable-decorators": "^1.20.3",
+    "@decaf-ts/logging": "^0.26.3",
+    "@decaf-ts/styles": "^0.7.5",
+    "@decaf-ts/transactional-decorators": "^0.13.2",
+    "@decaf-ts/ui-decorators": "^0.21.1",
+    "@ionic/angular": "^8.8.19",
+    "@ngx-translate/core": "^17.0.0",
+    "@ngx-translate/http-loader": "^17.0.0",
+    "codemirror": "^6.0.2",
+    "commander": "^13.1.0",
+    "echarts": "^6.1.0",
+    "mathlive": "^0.111.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3",
+    "zone.js": "^0.15.1"
+  },
   "devDependencies": {
-    "@decaf-ts/utils": "latest"
+    "@axe-core/playwright": "^4.14.0",
+    "@decaf-ts/utils": "^1.11.1",
+    "@eslint/js": "^9.39.5",
+    "@faker-js/faker": "^9.9.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.2.0",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.5.0",
+    "jest": "^30.4.2",
+    "jest-html-reporters": "^3.1.7",
+    "jest-junit": "^17.0.0",
+    "jsdoc": "^4.0.5",
+    "jsdoc-mermaid": "^1.0.0",
+    "markdown-include": "^0.4.3",
+    "playwright": "^1.64.1",
+    "prettier": "^3.8.3",
+    "rimraf": "^6.1.3",
+    "ts-jest": "^29.4.12",
+    "typescript-eslint": "^8.67.0"
   }
 }

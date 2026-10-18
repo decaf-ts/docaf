@@ -1,0 +1,708 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "baseline": {
+      "repository": "https://github.com/SoftwareBrothers/better-docs",
+      "commit": "248ea8f0ed0eaff9eaf568554566f80454ab8cf5",
+      "license": "MIT",
+      "parser": "typescript/type-converter.js"
+    },
+    "fixtures": "tests/fixtures/parity/common",
+    "manifest": "scripts/parity/fixtures.json",
+    "normalizationVersion": 1,
+    "generatedBy": "scripts/parity/generate-baseline.mjs",
+    "regeneration": "git clone https://github.com/SoftwareBrothers/better-docs /tmp/better-docs && git -C /tmp/better-docs checkout 248ea8f0ed0eaff9eaf568554566f80454ab8cf5 && npm run parity:baseline"
+  },
+  "fixtures": [
+    {
+      "file": "models.ts",
+      "sha256": "803d88e57b954d21228ccd441c2283a88560a6e00c4478618422b8c2c908f41d",
+      "statements": [
+        {
+          "index": 0,
+          "name": "Identifier",
+          "kind": "type-alias",
+          "blocks": [
+            {
+              "text": "Numeric identifier.",
+              "tags": [
+                {
+                  "name": "category",
+                  "text": "Parity"
+                },
+                {
+                  "name": "subcategory",
+                  "text": "Contracts"
+                },
+                {
+                  "name": "typedef",
+                  "type": "string | number",
+                  "text": "Identifier"
+                }
+              ],
+              "anchors": [],
+              "identifier": "Identifier",
+              "kind": "alias"
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "name": "ImportedRecord",
+          "kind": "type-alias",
+          "blocks": []
+        },
+        {
+          "index": 2,
+          "name": "Pair",
+          "kind": "interface",
+          "blocks": [
+            {
+              "text": "Pair of values.",
+              "tags": [
+                {
+                  "name": "category",
+                  "text": "Parity"
+                },
+                {
+                  "name": "subcategory",
+                  "text": "Contracts"
+                },
+                {
+                  "name": "template",
+                  "text": "T, U"
+                },
+                {
+                  "name": "interface",
+                  "text": "Pair"
+                }
+              ],
+              "anchors": [],
+              "identifier": "Pair",
+              "kind": "interface"
+            },
+            {
+              "text": "First value.",
+              "tags": [
+                {
+                  "name": "name",
+                  "text": "Pair#first"
+                },
+                {
+                  "name": "type",
+                  "type": "T"
+                }
+              ],
+              "anchors": [],
+              "identifier": "Pair#first",
+              "kind": "member"
+            },
+            {
+              "text": "Second value.",
+              "tags": [
+                {
+                  "name": "name",
+                  "text": "Pair#second"
+                },
+                {
+                  "name": "type",
+                  "type": "U"
+                }
+              ],
+              "anchors": [],
+              "identifier": "Pair#second",
+              "kind": "member"
+            },
+            {
+              "text": "Optional label.",
+              "tags": [
+                {
+                  "name": "name",
+                  "text": "Pair#label"
+                },
+                {
+                  "name": "optional"
+                },
+                {
+                  "name": "type",
+                  "type": "string"
+                }
+              ],
+              "anchors": [],
+              "identifier": "Pair#label",
+              "kind": "member"
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "name": "Options",
+          "kind": "type-alias",
+          "blocks": [
+            {
+              "text": "Nested options record.",
+              "tags": [
+                {
+                  "name": "category",
+                  "text": "Parity"
+                },
+                {
+                  "name": "subcategory",
+                  "text": "Contracts"
+                },
+                {
+                  "name": "typedef",
+                  "type": "object",
+                  "text": "Options"
+                },
+                {
+                  "name": "property",
+                  "type": "string",
+                  "target": "label",
+                  "text": "Visible label."
+                },
+                {
+                  "name": "property",
+                  "type": "number",
+                  "target": "[count]",
+                  "text": "Optional count."
+                },
+                {
+                  "name": "property",
+                  "type": "object",
+                  "target": "nested",
+                  "text": "Nested settings."
+                },
+                {
+                  "name": "property",
+                  "type": "boolean",
+                  "target": "nested.flag"
+                },
+                {
+                  "name": "property",
+                  "type": "Array",
+                  "target": "nested.tags"
+                }
+              ],
+              "anchors": [],
+              "identifier": "Options",
+              "kind": "object"
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "name": "Combined",
+          "kind": "type-alias",
+          "blocks": [
+            {
+              "text": "Combined contract.",
+              "tags": [
+                {
+                  "name": "category",
+                  "text": "Parity"
+                },
+                {
+                  "name": "subcategory",
+                  "text": "Contracts"
+                },
+                {
+                  "name": "typedef",
+                  "type": "object",
+                  "text": "Combined"
+                },
+                {
+                  "name": "property",
+                  "type": "boolean",
+                  "target": "[extra]"
+                }
+              ],
+              "anchors": [],
+              "identifier": "Combined",
+              "kind": "object"
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "name": "BaseModel",
+          "kind": "class",
+          "blocks": [
+            {
+              "text": "Base name.",
+              "tags": [],
+              "anchors": [],
+              "kind": "comment"
+            },
+            {
+              "text": "Formats a value.",
+              "tags": [
+                {
+                  "name": "param",
+                  "target": "value",
+                  "text": "input value"
+                },
+                {
+                  "name": "param",
+                  "target": "suffix",
+                  "text": "optional suffix"
+                },
+                {
+                  "name": "return",
+                  "text": "formatted value"
+                },
+                {
+                  "name": "example",
+                  "text": "<caption>Format</caption>\nnew BaseModel().format(\"a\")"
+                },
+                {
+                  "name": "method"
+                }
+              ],
+              "anchors": [],
+              "kind": "method"
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "name": "DerivedModel",
+          "kind": "class",
+          "blocks": [
+            {
+              "text": "First value.",
+              "tags": [],
+              "anchors": [],
+              "kind": "comment"
+            },
+            {
+              "text": "Second value.",
+              "tags": [],
+              "anchors": [],
+              "kind": "comment"
+            },
+            {
+              "text": "Optional label.",
+              "tags": [
+                {
+                  "name": "type",
+                  "type": "string"
+                }
+              ],
+              "anchors": [],
+              "kind": "member"
+            },
+            {
+              "text": "Protected state.",
+              "tags": [
+                {
+                  "name": "protected"
+                }
+              ],
+              "anchors": [],
+              "kind": "comment"
+            },
+            {
+              "text": "Private secret.",
+              "tags": [
+                {
+                  "name": "private"
+                }
+              ],
+              "anchors": [],
+              "kind": "comment"
+            },
+            {
+              "text": "Static count.",
+              "tags": [],
+              "anchors": [],
+              "kind": "comment"
+            },
+            {
+              "text": "Creates a derived model.",
+              "tags": [
+                {
+                  "name": "param",
+                  "target": "first",
+                  "text": "first value"
+                },
+                {
+                  "name": "method"
+                },
+                {
+                  "name": "constructor"
+                }
+              ],
+              "anchors": [],
+              "kind": "constructor"
+            },
+            {
+              "text": "Processes a value.",
+              "tags": [
+                {
+                  "name": "param",
+                  "target": "value",
+                  "text": "input value"
+                },
+                {
+                  "name": "return",
+                  "text": "processed value"
+                },
+                {
+                  "name": "deprecated",
+                  "text": "use format"
+                },
+                {
+                  "name": "method"
+                }
+              ],
+              "anchors": [],
+              "kind": "method"
+            },
+            {
+              "text": "Processes a numeric value.",
+              "tags": [
+                {
+                  "name": "param",
+                  "target": "value",
+                  "text": "input value"
+                },
+                {
+                  "name": "return",
+                  "text": "processed value"
+                },
+                {
+                  "name": "method"
+                }
+              ],
+              "anchors": [],
+              "kind": "method"
+            },
+            {
+              "text": "Loads external documentation.",
+              "tags": [
+                {
+                  "name": "load",
+                  "text": "./loaded.md"
+                },
+                {
+                  "name": "category",
+                  "text": "Parity"
+                },
+                {
+                  "name": "subcategory",
+                  "text": "Implementations"
+                },
+                {
+                  "name": "method"
+                },
+                {
+                  "name": "return",
+                  "type": "string"
+                }
+              ],
+              "anchors": [],
+              "kind": "method"
+            },
+            {
+              "text": "Async handler.",
+              "tags": [
+                {
+                  "name": "param",
+                  "target": "input",
+                  "text": "source value"
+                },
+                {
+                  "name": "return",
+                  "text": "nothing"
+                },
+                {
+                  "name": "async"
+                },
+                {
+                  "name": "method"
+                }
+              ],
+              "anchors": [],
+              "kind": "method"
+            },
+            {
+              "text": "Static factory.",
+              "tags": [
+                {
+                  "name": "param",
+                  "target": "name",
+                  "text": "display name"
+                },
+                {
+                  "name": "return",
+                  "text": "created model"
+                },
+                {
+                  "name": "method"
+                }
+              ],
+              "anchors": [],
+              "kind": "method"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "contracts.ts",
+      "sha256": "36bc6a11c9e8be6531e17061770357a229bd7cb95f7251963fe741729b8b9c60",
+      "statements": [
+        {
+          "index": 1,
+          "name": "Callback",
+          "kind": "type-alias",
+          "blocks": [
+            {
+              "text": "Callback contract.",
+              "tags": [
+                {
+                  "name": "category",
+                  "text": "Parity"
+                },
+                {
+                  "name": "subcategory",
+                  "text": "Types"
+                },
+                {
+                  "name": "typedef",
+                  "type": "function",
+                  "text": "Callback"
+                },
+                {
+                  "name": "param",
+                  "type": "string",
+                  "target": "input"
+                },
+                {
+                  "name": "param",
+                  "type": "number",
+                  "target": "[count]"
+                }
+              ],
+              "anchors": [],
+              "identifier": "Callback",
+              "kind": "function"
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "name": "Qualified",
+          "kind": "type-alias",
+          "blocks": []
+        },
+        {
+          "index": 3,
+          "name": "Lookup",
+          "kind": "type-alias",
+          "blocks": [
+            {
+              "text": "Generic lookup table.",
+              "tags": [
+                {
+                  "name": "category",
+                  "text": "Parity"
+                },
+                {
+                  "name": "subcategory",
+                  "text": "Types"
+                },
+                {
+                  "name": "typedef",
+                  "type": "object",
+                  "text": "Lookup"
+                },
+                {
+                  "name": "property",
+                  "type": "T",
+                  "target": "{...}"
+                }
+              ],
+              "anchors": [],
+              "identifier": "Lookup",
+              "kind": "object"
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "name": "PairReference",
+          "kind": "type-alias",
+          "blocks": []
+        },
+        {
+          "index": 5,
+          "name": "Alias",
+          "kind": "type-alias",
+          "blocks": [
+            {
+              "text": "Primitive alias.",
+              "tags": [
+                {
+                  "name": "category",
+                  "text": "Parity"
+                },
+                {
+                  "name": "subcategory",
+                  "text": "Types"
+                },
+                {
+                  "name": "typedef",
+                  "type": "string",
+                  "text": "Alias"
+                }
+              ],
+              "anchors": [],
+              "identifier": "Alias",
+              "kind": "alias"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "imported.ts",
+      "sha256": "35f2f9e04eaab3270e19bcae786527d18d464d70932acd6188f97fdf2fd821d9",
+      "statements": [
+        {
+          "index": 0,
+          "name": "Imported",
+          "kind": "interface",
+          "blocks": [
+            {
+              "text": "Imported contract.",
+              "tags": [
+                {
+                  "name": "category",
+                  "text": "Parity"
+                },
+                {
+                  "name": "subcategory",
+                  "text": "Contracts"
+                },
+                {
+                  "name": "interface",
+                  "text": "Imported"
+                }
+              ],
+              "anchors": [],
+              "identifier": "Imported",
+              "kind": "interface"
+            },
+            {
+              "text": "Value carried by the imported record.",
+              "tags": [
+                {
+                  "name": "name",
+                  "text": "Imported#value"
+                },
+                {
+                  "name": "type",
+                  "type": "string"
+                }
+              ],
+              "anchors": [],
+              "identifier": "Imported#value",
+              "kind": "member"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "loaded.ts",
+      "sha256": "034ede7c59a02752dc0f55cbc3d50211d293ca35956129cbf574b77a4552fd03",
+      "statements": [
+        {
+          "index": 0,
+          "name": "LoadedContract",
+          "kind": "interface",
+          "blocks": [
+            {
+              "text": "Loaded documentation target.",
+              "tags": [
+                {
+                  "name": "category",
+                  "text": "Parity"
+                },
+                {
+                  "name": "subcategory",
+                  "text": "Loaded"
+                },
+                {
+                  "name": "load",
+                  "text": "./loaded.md"
+                },
+                {
+                  "name": "interface",
+                  "text": "LoadedContract"
+                }
+              ],
+              "anchors": [],
+              "identifier": "LoadedContract",
+              "kind": "interface"
+            },
+            {
+              "text": "Loaded value.",
+              "tags": [
+                {
+                  "name": "name",
+                  "text": "LoadedContract#value"
+                },
+                {
+                  "name": "type",
+                  "type": "string"
+                }
+              ],
+              "anchors": [],
+              "identifier": "LoadedContract#value",
+              "kind": "member"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "widget.component.ts",
+      "sha256": "b46186f6a4ad59d693fa5bc629ebe50e74beaedb1d321e7b8fdfa1487b03f288",
+      "statements": [
+        {
+          "index": 1,
+          "name": "ParityWidgetComponent",
+          "kind": "class",
+          "blocks": [
+            {
+              "text": "Visible label.",
+              "tags": [],
+              "anchors": [],
+              "kind": "comment"
+            },
+            {
+              "text": "Item count.",
+              "tags": [
+                {
+                  "name": "type",
+                  "type": "number"
+                }
+              ],
+              "anchors": [],
+              "kind": "member"
+            },
+            {
+              "text": "Emitted when the label changes.",
+              "tags": [],
+              "anchors": [],
+              "kind": "comment"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
