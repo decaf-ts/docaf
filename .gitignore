@@ -1,5 +1,6 @@
 /lib
 /dist
+/tmp
 /docs/*
 /workdocs/drawings/*
 !/workdocs/drawings/*.drawio
