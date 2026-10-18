@@ -56,6 +56,8 @@ function pascal(value: string): string {
   return /^[0-9]/.test(safe) ? `Docs${safe}` : safe;
 }
 
+const CODE_IDENTIFIER_PATTERN = /^[_$A-Za-z][_$A-Za-z0-9]*$/;
+
 function explicitRelative(from: string, target: string): string {
   let relative = path.relative(from, target).split(path.sep).join("/");
   if (!relative.startsWith(".")) relative = `./${relative}`;
@@ -645,6 +647,23 @@ export const routes: Routes = [
     properties: DocComponentPropertyRecord[],
     events: DocComponentEventRecord[]
   ): string {
+    const invalidNames = [
+      ...properties.map((property) => property.name),
+      ...events.map((event) => event.name)
+    ].filter((name) => !CODE_IDENTIFIER_PATTERN.test(name));
+    if (invalidNames.length) {
+      throw new DocsBuildError([
+        {
+          severity: "error",
+          code: "DOCS_PREVIEW_IDENTIFIER",
+          message: `Synthetic preview generation refused non-identifier property or event names: ${invalidNames
+            .map((name) => JSON.stringify(name))
+            .join(
+              ", "
+            )}. Property and event names must match ^[_$A-Za-z][_$A-Za-z0-9]*$/.`
+        }
+      ]);
+    }
     const lines = [
       `import { Component, EventEmitter, Input, Output } from "@angular/core";`,
       "",

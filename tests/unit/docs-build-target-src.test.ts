@@ -544,3 +544,111 @@ describe("AngularDocsBuildTarget helpers", () => {
     expect(stylesheet).toContain(".docs-synthetic-preview");
   });
 });
+
+async function prepareFailure(
+  snapshot: unknown
+): Promise<{ codes: string[]; message: string }> {
+  const fixture = project("docaf-target-preview-invalid-", snapshot);
+  const target = targetFor(fixture.root);
+  try {
+    await target.prepare(fixture.context);
+    throw new Error("expected prepare to fail");
+  } catch (error) {
+    return {
+      codes: codesOf(error),
+      message: (error as Error).message,
+    };
+  }
+}
+
+function previewSource(fixture: Project): string {
+  return fs.readFileSync(
+    path.join(
+      fixture.context.outputDirectory,
+      ".docaf-angular-app",
+      "src",
+      "app",
+      "previews",
+      "fixturecomponent.preview.ts"
+    ),
+    "utf8"
+  );
+}
+
+describe("AngularDocsBuildTarget preview identifier validation (I-2)", () => {
+  const hostileNames = [
+    "x }; export class Injected {} //",
+    "emit`+process.exit(1))+//",
+    "tick`",
+    "line\nbreak",
+  ];
+
+  it.each(hostileNames)(
+    "refuses hostile property name %p with DOCS_PREVIEW_IDENTIFIER",
+    async (name) => {
+      const snapshot = cloneFixture();
+      snapshot.tables.componentProperties[0].name = name;
+
+      const failure = await prepareFailure(snapshot);
+
+      expect(failure.codes).toEqual(["DOCS_PREVIEW_IDENTIFIER"]);
+      expect(failure.message).toContain(
+        "Synthetic preview generation refused non-identifier property or event names"
+      );
+      expect(failure.message).toContain(JSON.stringify(name));
+    }
+  );
+
+  it.each(hostileNames)(
+    "refuses hostile event name %p with DOCS_PREVIEW_IDENTIFIER",
+    async (name) => {
+      const snapshot = cloneFixture();
+      snapshot.tables.componentEvents[0].name = name;
+
+      const failure = await prepareFailure(snapshot);
+
+      expect(failure.codes).toEqual(["DOCS_PREVIEW_IDENTIFIER"]);
+      expect(failure.message).toContain(
+        "Synthetic preview generation refused non-identifier property or event names"
+      );
+      expect(failure.message).toContain(JSON.stringify(name));
+    }
+  );
+
+  it.each(["value", "_private", "$special"])(
+    "accepts legitimate property name %p in the synthetic preview",
+    async (name) => {
+      const snapshot = cloneFixture();
+      snapshot.tables.componentProperties[0].name = name;
+      snapshot.tables.componentProperties[0].alias = undefined;
+      const fixture = project("docaf-target-preview-property-", snapshot);
+      const target = targetFor(fixture.root);
+
+      await expect(target.prepare(fixture.context)).resolves.toBeUndefined();
+
+      const preview = previewSource(fixture);
+      expect(preview).toContain(`@Input() ${name}: any;`);
+      expect(preview).toContain('<div class="docs-synthetic-preview">');
+      expect(preview).toContain("FixtureComponentSyntheticPreview");
+    }
+  );
+
+  it.each(["value", "_private", "$special"])(
+    "accepts legitimate event name %p in the synthetic preview",
+    async (name) => {
+      const snapshot = cloneFixture();
+      snapshot.tables.componentEvents[0].name = name;
+      const fixture = project("docaf-target-preview-event-", snapshot);
+      const target = targetFor(fixture.root);
+
+      await expect(target.prepare(fixture.context)).resolves.toBeUndefined();
+
+      const preview = previewSource(fixture);
+      expect(preview).toContain(
+        `@Output() ${name} = new EventEmitter<any>();`
+      );
+      expect(preview).toContain('<div class="docs-synthetic-preview">');
+      expect(preview).toContain("FixtureComponentSyntheticPreview");
+    }
+  );
+});

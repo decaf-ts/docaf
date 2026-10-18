@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { randomBytes } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { DocsBuildError } from "../generator/diagnostics";
@@ -167,9 +168,14 @@ async function importConfigFile(configPath: string): Promise<DecafDocsConfig> {
     }
     const temporary = path.join(
       path.dirname(configPath),
-      `.decafdocs.config.${stableHash(source)}${commonjs ? ".cjs" : ".mjs"}`
+      `.decafdocs.config.${stableHash(source)}.${process.pid}.${randomBytes(4).toString("hex")}${
+        commonjs ? ".cjs" : ".mjs"
+      }`
     );
-    fs.writeFileSync(temporary, transpiled.outputText, "utf8");
+    fs.writeFileSync(temporary, transpiled.outputText, {
+      encoding: "utf8",
+      flag: "wx"
+    });
     modulePath = temporary;
     try {
       const imported = await dynamicImport(
