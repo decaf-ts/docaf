@@ -38,6 +38,22 @@ docker build --secret id=TOKEN,src="$HOME/.npmtoken" -t decaf-ts/docaf:latest .
 Never pass `NPM_TOKEN` with `--build-arg`; build arguments are recorded in the
 image history.
 
+### npm scripts
+
+The repository also exposes the template Docker pipeline as npm scripts:
+
+- `npm run docker:login` authenticates `ghcr.io` with the `docker-user` and
+  `docker` credentials from `decaf utils credentials`.
+- `npm run docker:build` builds from the root `Dockerfile` with BuildKit,
+  passing the `npm` credential as the `TOKEN` secret.
+- `npm run docker:publish` pushes the versioned and floating tags.
+
+These scripts are inherited from the `ts-workspace` template: they tag and push
+`ghcr.io/decaf-ts/ts-workspace:base-<version>` rather than
+`decaf-ts/docaf`, and they require `jq` plus the credentials above. Use them for
+the template base image; for the `decaf-ts/docaf` image documented here, use the
+manual `docker build` commands above or the Docker Publish workflow.
+
 ## Run the CLI against mounted folders
 
 The container entrypoint is `decaf docs`, so the first argument selects the

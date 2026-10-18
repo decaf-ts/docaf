@@ -4,7 +4,8 @@
     "plugins/summarize",
     "node_modules/jsdoc-mermaid",
     "node_modules/better-docs/typescript",
-    "node_modules/better-docs/category"
+    "node_modules/better-docs/category",
+    "./workdocs/plugins/docaf-site-docs.cjs"
   ],
   "typescript": {
     "moduleRoot": "src"
