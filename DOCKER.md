@@ -8,7 +8,7 @@ to a mounted output folder.
 ## Build the image
 
 ```bash
-docker build -t decaf-ts/docaf:latest .
+docker build -t ghcr.io/decaf-ts/docaf:latest .
 ```
 
 The build compiles the package, prunes development dependencies, and installs
@@ -24,7 +24,7 @@ private mirror, pass the npm token as a BuildKit secret instead of an `ARG` or
 ```bash
 DOCKER_BUILDKIT=1 docker build \
   --secret id=TOKEN,env=NPM_TOKEN \
-  -t decaf-ts/docaf:latest .
+  -t ghcr.io/decaf-ts/docaf:latest .
 ```
 
 Inside the build, `Dockerfile` writes the token to `.npmrc` only for the
@@ -32,7 +32,7 @@ Inside the build, `Dockerfile` writes the token to `.npmrc` only for the
 pattern works for a token file:
 
 ```bash
-docker build --secret id=TOKEN,src="$HOME/.npmtoken" -t decaf-ts/docaf:latest .
+docker build --secret id=TOKEN,src="$HOME/.npmtoken" -t ghcr.io/decaf-ts/docaf:latest .
 ```
 
 Never pass `NPM_TOKEN` with `--build-arg`; build arguments are recorded in the
@@ -40,19 +40,79 @@ image history.
 
 ### npm scripts
 
-The repository also exposes the template Docker pipeline as npm scripts:
+The repository also exposes the Docker pipeline as npm scripts:
 
 - `npm run docker:login` authenticates `ghcr.io` with the `docker-user` and
   `docker` credentials from `decaf utils credentials`.
 - `npm run docker:build` builds from the root `Dockerfile` with BuildKit,
-  passing the `npm` credential as the `TOKEN` secret.
-- `npm run docker:publish` pushes the versioned and floating tags.
+  passing the `npm` credential as the `TOKEN` secret. It tags both
+  `ghcr.io/decaf-ts/docaf:<package version>` and
+  `ghcr.io/decaf-ts/docaf:${VERSION:-latest}`.
+- `npm run docker:publish` pushes both of those tags.
 
-These scripts are inherited from the `ts-workspace` template: they tag and push
-`ghcr.io/decaf-ts/ts-workspace:base-<version>` rather than
-`decaf-ts/docaf`, and they require `jq` plus the credentials above. Use them for
-the template base image; for the `decaf-ts/docaf` image documented here, use the
-manual `docker build` commands above or the Docker Publish workflow.
+The scripts require the credentials above and a working BuildKit builder. They
+publish the same image and tag names as the Docker Publish workflow, so local
+and CI output agree. For a one-off build without credentials, use the direct
+`docker build` commands above.
+
+## CI image publishing
+
+`.github/workflows/docker-publish.yml` builds the root `Dockerfile` and publishes
+the image to GHCR:
+
+- `ghcr.io/decaf-ts/docaf:<version>` — the `version` field from `package.json`
+  at the released commit (`0.1.0` today), matching the npm package version.
+- `ghcr.io/decaf-ts/docaf:latest` — floating alias for the most recent publish.
+
+The published artifact is the runtime stage described above: it runs as the
+non-root `node` user and keeps the `decaf docs` entrypoint. The optional
+BuildKit `TOKEN` secret is wired to `NPM_TOKEN` in the same way as the local
+build.
+
+The workflow runs on `release: published` (in parallel with the npm publish) and
+on `workflow_dispatch`. The npm `docker:*` scripts target the same image name
+and tags for local publishing, so CI and local output agree.
+
+On a release the image is built from the release tag and pushed as-is: the
+release pipeline has already run build, test, and security gates. A manual
+dispatch defaults to running `build:prod`, `test:all`, and a trivy scan before
+the image build; untick those inputs to build the image only. Only
+`linux/amd64` is built by default; pass a buildx platform list to publish more
+architectures.
+
+The workflow is a thin caller of
+`decaf-ts/reusable-actions/.github/workflows/docker-publish.yml@master`, so the
+image build, tag composition, and registry login stay in one place. It passes
+`secrets: inherit`; no credential is written in the workflow file.
+
+### Dispatch inputs
+
+| Input | Default | Purpose |
+| --- | --- | --- |
+| `version-tag` | empty | Versioned tag. Empty reads `version` from `package.json`. |
+| `push` | `true` | Push the image. Untick for a build-only run. |
+| `platforms` | `linux/amd64` | Buildx platform list (for example `linux/amd64,linux/arm64`). |
+| `no-cache` | `false` | Build with `--no-cache`. |
+| `registries` | `ghcr.io` | Comma-separated registries to log in to and push to. |
+| `registry-user` | `decaf-ts-admin` | Username used for every registry login. |
+| `run-build-test` | `true` | Run `build:prod` + `test:all` before building the image. |
+| `run-trivy-scan` | `true` | Run a trivy vulnerability scan before building the image. |
+
+### Required secrets and protections
+
+- Registry login uses `REGISTRY_TOKEN`, falling back to `GH_PAT` then
+  `GH_TOKEN`. Whichever secret is configured must belong to `registry-user`
+  (`decaf-ts-admin` by default) and carry permission to write packages. For
+  GHCR this is the `write:packages` scope on a personal access token. The
+  reusable workflow cannot use the automatic `GITHUB_TOKEN` for this login.
+- `NPM_TOKEN` is optional. When set it is passed to the build as the BuildKit
+  `TOKEN` secret, exactly like the local `--secret id=TOKEN` command above, so
+  the image build can reach a private npm mirror. Public installs need no
+  token.
+- The GHCR package must be linked to this repository and allow access from the
+  release workflow. Keep the repository's release creation and the registry
+  secrets restricted to trusted maintainers: whoever can publish a release can
+  publish the image.
 
 ## Run the CLI against mounted folders
 
@@ -63,8 +123,8 @@ directory at `/output`:
 ```bash
 docker run --rm \
   -v "$PWD:/workspace" \
-  -v "$PWD/dist/docs:/output" \
-  decaf-ts/docaf:latest build --config /workspace/decafdocs.config.mjs
+  -v "$PWD/dist:/output" \
+  ghcr.io/decaf-ts/docaf:latest build --config /workspace/decafdocs.config.mjs
 ```
 
 A minimal config for this layout:
@@ -99,8 +159,8 @@ container user. Choose one of these approaches:
     --user "$(id -u):$(id -g)" \
     -e HOME=/tmp \
     -v "$PWD:/workspace" \
-    -v "$PWD/dist/docs:/output" \
-    decaf-ts/docaf:latest build
+    -v "$PWD/dist:/output" \
+    ghcr.io/decaf-ts/docaf:latest build
   ```
 
 - Pre-create the output directory and grant group/other write access, or
@@ -125,6 +185,7 @@ throwaway project from `tests/fixtures/vertical-slice`, runs a real
 
 ```bash
 bin/docker-smoke.sh
+npm run test:docker   # package-script alias for the same end-to-end check
 ```
 
 Useful environment variables:

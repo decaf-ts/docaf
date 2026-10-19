@@ -21,7 +21,7 @@ module.exports = {
         filename: "test-report.html",
         openReport: true,
         expand: true,
-        pageTitle: "ts-workspace Test Report",
+        pageTitle: "@decaf-ts/docaf Test Report",
         stripSkippedTest: true,
         darkTheme: true,
         enableMergeData: true,

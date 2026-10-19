@@ -1,364 +1,155 @@
-## **_Initial Setup_**
+## For Developers
 
-#### if you use GitHub
+This guide is for people changing `@decaf-ts/docaf` itself. To *use* the generator in another
+project, start with [How to Use](../5-HowToUse.md). The short version: install the package and
+`@decaf-ts/cli`, write `decafdocs.config.ts`, and run `decaf docs build`.
 
-create a new project using this one as a template.
+### Prerequisites
 
-clone it `git clone <project>` and navigate to the root folder `cd <project>`
+- Node.js >= 20 and npm >= 10. Some tooling (the E2E runner and TypeScript execution) requires
+  Node.js >= 22.6.
+- Git, for the normal checkout.
+- Docker only when you build the image or run the Docker smoke test.
 
-enroll your access token once via `decaf utils credentials setup` (stored in the OS keychain with env-var fallback - never inside the repository).
+The repository targets Angular 21 for the renderer. The Angular packages are regular
+dependencies, not optional peers, so a plain `npm ci` installs everything the renderer needs.
 
-run `npm run set-git-auth` to register the OS-native git credential helper (`decaf utils credentials git-helper`)
+### Bootstrap
 
-#### If your project has private dependencies or publishes to private npm registries, create an `.npmrc` containing:
+Clone the repository and install exactly what the lockfile pins:
 
-```text
-@<scope1>:registry=https://<ADDRESS>.com/api/v4/packages/npm/
-@<scope2>:registry=https://<ADDRESS>.<DOMAIN>.com/api/v4/packages/npm/
-//<ADDRESS>.<DOMAIN>.com/:_authToken=${TOKEN}
-//<ADDRESS>.<DOMAIN>.com/api/v4/groups/<GROUP_ID>/packages/npm/:_authToken=${TOKEN}
-//<ADDRESS>.<DOMAIN>.com/api/v4/projects/<PROJECT_ID>/packages/npm/:_authToken=${TOKEN}
+```bash
+git clone https://github.com/decaf-ts/docaf.git
+cd docaf
+npm ci
+npm run build
 ```
 
-Changing:
+If the registry needs a token, `npm run do-install` resolves the npm credential through
+`decaf utils credentials` and exposes it to npm as `NPM_TOKEN`. Do not put tokens in the
+repository or in `package.json`.
 
-- <ADDRESS> to `gitlab` or `github` (or other);
-- <DOMAIN> to your domain if any (if you are using plain gitlab or GitHub, remove "<DOMAIN>" and the extra dot);
-- <GROUP_ID> to your project's group id (if any). otherwise remove this line
-- <PROJECT_ID> to your project's id
+### Repository layout
 
-### Installation
+| Path | Contents |
+| --- | --- |
+| `src/generator/` | TypeScript extraction, the ported BetterDocs type converter, and the model writers |
+| `src/build/` | Build targets, including the Angular target |
+| `src/ui/` and `src/for-angular/` | Renderer-independent view models and the Angular renderer |
+| `src/publisher/` | Pruning, sorting, links, pages, navigation, tutorials, search, and manifests |
+| `src/cli/` | `decaf docs` command, configuration loading, and orchestration |
+| `src/snapshot/` | Portable snapshot records, codecs, and validation |
+| `tests/unit`, `tests/integration` | Jest suites |
+| `tests/e2e` | Playwright static-app suite (not part of `test:all`) |
+| `tests/fixtures/parity` | Committed BetterDocs parity fixtures and baseline |
+| `scripts/parity` | Executable parity harness |
+| `workdocs/` | Sources for `README.md` and the long-form guides |
+| `bin/` | Docker smoke test, release, and credential helpers |
 
-Run `npm install` (or `npm run do-install` if you have private dependencies - it resolves the npm token via `decaf utils credentials`) to install the dependencies:
+Build output is `lib/` (ESM and CJS) and `dist/` (bundles). The self-hosted site is written to
+`docs/`, and the portable snapshot to `.decaf-docs/`. None of those are hand-edited.
 
-If this is the first time you are running this command, it will also (according to your choices:
+### Build scripts
 
-- update this repository's dependencies to their latest version;
-- creates the various token files which you can leave empty unless you have private dependencies or publish to private registries
-- delete the `postinstall` script from `package.json`;
-- try to commit the updated `package.json` and deleted files (having ssh access helps here);
+| Command | Purpose |
+| --- | --- |
+| `npm run build` | Development build into `lib/` and `dist/` |
+| `npm run build:prod` | Optimized production build |
+| `npm run lint` / `npm run lint-fix` | ESLint, with or without automatic fixes |
+| `npm run docs` | `readme` + clean `docs/` + build + `decaf docs build` |
+| `npm run readme` | Compose `README.md` from `workdocs/` with `markdown-include` |
 
-### Scripts
-
-The repository exposes the following npm scripts:
-
-#### Setup and Maintenance
-
-- `do-install` – resolves the npm token via `decaf utils credentials` into the `NPM_TOKEN` environment variable and runs `npm install`, which is handy when private registries require an auth token.
-- `update-dependencies` – upgrades all dependencies that start with `@decaf-ts/` to their latest version.
-- `update-scripts` – downloads the latest GitHub workflows, configs, and templates from the [ts-workspace](https://github.com/decaf-ts/ts-workspace) template repository.
-- `sync-codex` – copies the prompts under `./.codex/prompts` into `~/.codex/prompts` so Codex CLI can reuse them.
-- `on-first-run` – bootstraps the project by calling `update-scripts` with the `--boot` flag.
-- `set-git-auth` – registers the OS-native git credential helper via `decaf utils credentials git-helper`; run this once per repository.
-- `flash-forward` – bumps every dependency to the latest version via `npm-check-updates` and re-installs.
-- `reset` – restores the repository to the state of the default branch (wipes the working tree and re-installs dependencies); use with care.
-
-#### Build and Quality
-
-- `build` – runs `npx build-scripts --dev` to produce development builds in `lib` and `dist`.
-- `build:prod` – runs `npx build-scripts --prod` to generate optimized production builds.
-- `lint` – executes ESLint across the repository.
-- `lint-fix` – runs ESLint with `--fix` to automatically resolve issues when possible.
-- `prepare-pr` – runs documentation, test, readme refresh, linting, production build, and coverage ahead of opening a pull request.
-
-#### Repository AI Automation (via Codex)
-
-- `repo:init` – launches the Codex repository initialization workflow for this project.
-- `repo:setup` – runs the general setup Codex flow using the prompts in `.codex/prompts`.
-- `repo:doc` – refreshes documentation via the Codex documentation prompts.
-- `repo:tests` – generates or updates tests through the Codex testing flow.
-- `repo:readme` – regenerates the README with the Codex readme prompt.
-- `repo:pr` – sequentially executes `repo:doc`, `repo:tests`, and `repo:readme`.
-
-#### Documentation Assets
-
-- `drawings` – converts every Draw.io file under `workdocs/drawings` into PNG assets and copies them into `workdocs/resources`.
-- `uml` – renders each PlantUML diagram found in `workdocs/uml` to PNG and copies the result to `workdocs/resources`.
-- `docs` – clears the `docs` folder and rebuilds the static documentation site via `build-scripts --docs`.
-- `publish-docs` – publishes the Markdown content under `workdocs/confluence` to Confluence through the official `markdown-confluence` container.
-
-#### Docker
-
-- `docker:login` – authenticates against `ghcr.io` using registry credentials resolved via `decaf utils credentials`.
-- `docker:build` – convenience alias that delegates to `docker:build-base`.
-- `docker:build-base` – builds the base container image with BuildKit using the version from `package.json`.
-- `docker:publish` – convenience alias that delegates to `docker:publish-base`.
-- `docker:publish-base` – pushes the versioned and `latest` Docker images to the GHCR registry.
+`npm run docs` dogfoods the generator against `src/` using `decafdocs.config.ts`. It calls the
+`decaf` binary from the local `@decaf-ts/cli` devDependency; run `npm ci` before using it.
 
 ### Tests
 
-All automated test scripts live in `package.json`:
+| Command | Scope |
+| --- | --- |
+| `npm test` / `npm run test:all` | Every Jest suite under `tests/` |
+| `npm run test:unit` | `tests/unit` |
+| `npm run test:integration` | `tests/integration` |
+| `npm run test:dist` | The full suite twice, against `lib/` and `dist/` (`TEST_TARGET`) |
+| `npm run test:circular` | Circular-dependency check on `src/index.ts` via `dpdm` |
+| `npm run test:parity` | BetterDocs type-converter parity against the committed baseline |
+| `npm run test:e2e` | Build, then the Playwright static-app suite |
+| `npm run test:docker` | Build the image and run `bin/docker-smoke.sh` end to end (needs Docker; not part of `test:all`) |
+| `npm run coverage` | Full suite with coverage, reports under `workdocs/reports/` |
+| `npm run prepare-it-tests` | Shared CI hook; a no-op here because no infrastructure is needed |
 
-- `test` – default entry point; forwards directly to `test:all`.
-- `test:unit` – runs Jest against files in `tests/unit`.
-- `test:integration` – runs Jest against files in `tests/integration`.
-- `test:all` – executes the entire Jest test suite under `tests`.
-- `test:dist` – runs the full suite twice, once against the compiled `lib` output and once against the `dist` bundle (via the `TEST_TARGET` environment variable).
-- `test:circular` – checks the source for circular dependencies using `dpdm`.
-- `prepare-it-tests` – no-op hook called by the shared CI workflows (`npm run prepare-it-tests --if-present`) before any test/coverage run; repositories whose integration tests need backing infrastructure implement it to boot that infra.
-- `coverage` – wipes previous coverage JSON files and runs the full test suite with the coverage-specific Jest config to emit reports and badges.
+`test:all` also verifies that `package-lock.json` is in sync with `package.json` via
+`npm ci --dry-run`, so a hand-edited or stale lockfile fails the default suite.
 
-## Linting
+`test:dist` needs a build first (`npm run build`). `test:e2e` builds for you, but needs a local
+Chromium:
 
-This repo comes with eslint + prettier preconfigured to the default standards.
-
-Please configure your IDE to recognize these files and perform automatic validation and fixes on save:
- - Webstorm:
-   - eslint recommended setup preconfigured under `.idea/jsLinters/eslint.xml`
-   - prettier recommended setup preconfigured under `.idea/prettier.xml`
- - VSCode(ium):
-   - eslint recommended setup preconfigured under `.vscode/settings.json`
-   - prettier recommended setup preconfigured under `.vscode/settings.json`
-
-## Testing
-
-Preconfigured Jest-based testing:
-
-- `npm run test` – alias for `test:all`.
-- `npm run test:unit` – executes unit tests under `tests/unit`.
-- `npm run test:integration` – executes integration tests under `tests/integration`.
-- `npm run test:dist` – re-runs the suite against the compiled `lib` and `dist` outputs.
-- `npm run test:circular` – checks for circular dependencies.
-- `npm run coverage` – stores coverage and test reports under `workdocs/reports`.
-- Coverage and test results become part of the exported docs.
-- Ignores `cli.ts` from coverage since that is an executable file.
-- Uses `jest.config.ts` as the base config.
-- Uses `workdocs/reports/jest.coverage.config.ts` for coverage-specific settings.
-- Defines the coverage threshold in `workdocs/reports/jest.coverage.config.ts`.
-
-## Documentation
-
-The repository proposes a [way to generate documentation](./Documentation.md) that while still not ideal, produces very consistent results.
-
-There are 3 steps in generating the documentation (automated in CI):
-
-- `npm run drawings` - generates png files from each drawing in the `workdocs/drawings` folder and moves them to the `workdocs/resources` folder (requires Docker);
-- `npm run uml` - generates png files from each PlantUML diagram in the `workdocs/uml` folder and moves them to the `workdocs/resources` folder (requires Docker);
-- `npm run docs` - (should be ran after `npm run coverage` to include test results and coverage) this has several stages, defined under the `npx build-docs`):
-  - compiles the Readme file via md compile:
-    - enables keeping separate files for sections that are then joined into a single file;
-    - Allows keeping specific files in the jsdoc tutorial folder so they show up on their own menu;
-  - compiles the documentation from the source code using jsdoc:
-    - uses the better docs template with the category and component plugins
-    - uses the mermaid jsdoc plugin to imbue uml diagrams in the docs
-    - includes a nav link to the test coverage results;
-  - copies the jsdoc and mds to `/docs`;
-  - copies the `./workdocs/{drawings, uml, assets, resources}` to `./docs`;
-
-The produced `docs` folder contains the resulting documentation;
-
-## Continuous Integration/Deployment
-
-While the implementation for gitlab and GitHub are not perfectly matched, they are perfectly usable.
-
-The template comes with ci/cd for :
-
-- gitlab (with caching for performance):
-  - stages:
-    - dependencies: Installs dependencies (on `package-lock.json` changes, caches node modules);
-    - build: builds the code (on `src/*` changes, caches `lib` and `dist`);
-    - test: tests the code (on `src/*`, `test/*` changes, caches `workdocs/{resources, badges, coverage}`);
-    - deploy:
-      - deploys to package registry on a tag (public|private);
-      - deploys docker image to docker registry (private);
-      - Deploys the documentation to the repository pages;
-- github:
-  - jest-test: standard `install -> build -> test` loop;
-  - jest-coverage: extracts coverage from the tests;
-  - codeql-analysis: Code quality analysis;
-  - snyk-scan: Vulnerability scanning
-  - pages: builds the documentation and deploys to GitHub pages
-  - release-on-tag: issues a release when the tag does not contain `-no-ci` string
-  - publish-on-release: publishes to package registry (following the release) when the tag does not contain the `-no-ci` string
-  - Requires Variables:
-    - CONSECUTIVE_ACTION_TRIGGER: secret to enable actions to trigger other actions;
-    - NPM_TOKEN: npm registry token
-  - CI Pages Setup:
-    - Enable Pages via a GitHub action: ![pages-via-action](../assets/gh-pages-by-action.png)
-    - Secure Workflows via GitHub action: ![secure-workflows](../assets/gh-allow-workflows.png)
-    - Allow GitHub pages via GitHub action for tags: ![environment-rules](../assets/gh-environment-rules.png)
-
-### Releases
-
-This repository automates releases in the following manner:
-
-- run `decaf utils tag-release --tag <version> --message <message>` (arguments are optional):
-  - if arguments are missing, you will be prompted for them;
-- it will run `npm run prepare-pr` to ensure documentation, tests, and coverage are up to date;
-- it will commit all changes if needed;
-- it will create and push the new tag through `npm version`;
-
-If publishing to a private repo's npm registry, make sure you add to your `package.json`:
-
-```json
-{
-  "publishConfig": {
-    "<SCOPE>:registry": " https://<REGISTRY>/api/v4/projects/<PROJECT_ID>/packages/npm/"
-  }
-}
+```bash
+npx playwright install chromium
+npm run test:e2e
 ```
 
-Where:
+The E2E runner writes evidence to `tmp/e2e-artifacts/e2e-results.json`. `PLAYWRIGHT_ROOT` can
+point at an external Playwright install when the browser stack is kept outside this package.
 
-- `<SCOPE>` - Is the scope of your package;
-- `<REGISTRY>` - your registry host;
-- `<PROJECT_ID>` - you project ID number (easy to grab via UI in gitlab or by
-  running `$("meta[name=octolytics-dimension-repository_id]").getAttribute('content')` in the repository page in github);
+`test:parity` never downloads BetterDocs at test time: it verifies the pinned commit and fixture
+hashes, then compares normalized doclets against `tests/fixtures/parity/baseline.json`.
+Regenerating that baseline is a maintainer action and requires a checkout of the pinned upstream
+commit; see `scripts/parity/README.md`.
 
-### Publishing
+Coverage uses `workdocs/reports/jest.coverage.config.cjs`, writes reports to
+`workdocs/reports/`, and excludes `cli.ts` because it is an executable entry point.
 
-Unless the `-no-ci` flag is passed in the commit message when running `decaf utils tag-release`, publishing will be handled
-automatically by github/gitlab (triggered by the tag).
+### Documentation workflow
 
-When the `-no-ci` flag is passed then you can:
+`README.md` is generated. Edit the section files (`workdocs/1-Header.md` through
+`workdocs/99-Footer.md`) or `workdocs/Readme.md`, then:
 
-- run `npm publish`. This command assumes :
-  - you have previously run the release script and tagged the repository;
-  - you have you publishing properly configured in `npmrc` and `package.json`;
-  - The token for any special access required is resolved via `decaf utils credentials`;
-
-### AI
-
-#### codex
-This repository comes prebuilt with codex support. It will use the prompts and configurations in the `.codex` folder to provide AI assistance.
-To sync its prompts, run the `npm run sync-codex` command.
-Prompts under `./.codex/prompts` are:
-- `update-readme.md` - will update the readme file with a summary, detailed description, and examples of use for all identified elements in the code and tests;
-- `bulk-tests.md` - will create tests until a certain coverage is reached;
-- `repo-setup.md` - will ensure the repository is properly setup with correct badges, scripts, and documentation;
-- `update-dependencies.md` - will update all dependencies to their latest versions, taking care of any breaking changes;
-- `doc.md` - will setup a documentation role;
-- `file.md` - will document the file;
-- `bulk-docs.md` - will document all files in the `src` folder;
-
-`AGENTS.md` can also be found in the `.codex` folder, describing how to use agents with this repository.
-
-### Repository Structure
-
-```
-repository-root
-│
-│   .confluence-token               <-- stores confluence access token
-│   .dockerignore                   <-- Defines files by docker in the build image
-│   .dockeruser                     <-- stores docker registry user
-│   .dockertoken                    <-- stores docker registry access token
-│   .gitignore                      <-- Defines files ignored to git
-│   .gitlab-ci.yml                  <-- CI behaviour for gitlab
-│   .npmignore                      <-- Defines files ignored by npm
-│   .nmprc                          <-- Defines the Npm registry for this package
-│   .nmptoken                       <-- Defines access token for the Npm registry for this package
-│   .prettierrc                     <-- style definitions for the project
-│   .snyk                           <-- vulnerability scan (via snyk) config
-│   .token                          <-- token for dependencies in private registries
-│   .eslint.config.js               <-- linting for the project
-│   jest.config.ts                  <-- Tests Configuration file
-│   LICENCE.md                      <-- Licence disclamer
-│   package.json
-│   package-lock.json
-│   README.md                       <-- Readme File dynamically compiled from 'workdocs' via the 'docs' npm script
-│   tsconfig.json                   <-- Typescript config file.
-│
-└───.codex
-│   │   ...                         <-- codex prompts and configs
-│
-└───.github
-│   │   ...                         <-- github workflows and templates
-│
-└───.idea
-│   │   ...                         <-- IDE run scripts for Jetbrains IDEs
-│
-│└───.vscode
-│   │   ...                         <-- IDE run scripts and configs for VSCode(ium)
-│
-└───bin
-│   │───tag_release.sh             <-- Script to help with releases
-│   └───sync-codex.sh              <-- Script to update codex prompts from reporitory ones
-└───dist
-│   │   ...                         <-- Dinamically generated folder containing the bundles for distribution
-│
-└───docs
-│   │   ...                         <-- Dinamically generated folder, containing the compiled documentation for this repository. generated via the 'docs' npm script
-│
-└───lib
-│   |   ...                         <-- Dinamically generated folder containing the compiled code
-│
-└───src
-│   │   ...                         <-- Source code for this repository
-│
-└───tests
-│   │───bundling                    <-- Tests the result of the produced bundle
-│   │───unit                        <-- Unit tests
-│   └───integration                 <-- Integration tests
-│
-└───workdocs                        <-- Folder with all pre-compiled documentation
-    │───assets                      <-- Documentation asset folder
-    │───confluence                  <-- folder containing specific documentation to be synced with a confluence page
-    │───drawings                    <-- Drawio drawings that are converted to the resources folder dynamically
-    │───reports                     <-- Folder storing generated content (compiled uml, drawio, test reports, etc)
-    │   └───coverage                <-- Auto generated coverage results (report ready html)
-    │   └───data                    <-- folder used as temp while genrating reports wiht attachements
-    │   └───html                    <-- test results (jest-html-reporters) complete test report with attachements
-    │   └───junit                   <-- test results (junit xml)
-    │   └───jest.coverage.config.ts <-- jest config collecting coverage and exporting test results (extends base config)
-    │───resources                   <-- Folder storing generated content (compiled uml, drawio, etc)
-    │───tutorials                   <-- Tutorial folder (will show up on tutorial section in generated documentation)
-    │───uml                         <-- folder containing puml files to be compiled along with the documentation
-    │   ...                         <-- Categorized *.md files that are merged to generate the final readme (via md compile)
-    │   jsdocs.json                 <-- jsdoc Documentation generation configuration file
-    │   Readme.md                   <-- Entry point to the README.md (will import other referenced md files)
-    │   readme-md.json              <-- md Documentation generation configuration file for the README.md file
+```bash
+npm run readme
 ```
 
-## IDE Integrations
+The long-form guides under `workdocs/tutorials/` are committed Markdown and are not part of the
+generated site. The API site itself comes from the JSDoc comments in `src/`; authoring rules are
+in [Documentation](./Documentation.md). Check that relative links still resolve when you move or
+rename a guide, because the README links into `workdocs/tutorials/`.
 
-### Visual Studio Code (VSCode)
+### Shared-workspace rules
 
-For an optimal development experience in **VSCode**, we recommend installing the following extensions:
+This checkout may be mounted in a workspace that other runs use concurrently. Keep changes
+inside `docaf/`; do not edit `src/`, `tests/`, `package.json`, or another package's files as part
+of a documentation change. A documentation task must not commit, branch, or push — the
+coordinating issue owns the single approved commit. If you need a source or script change,
+report it rather than making it silently.
 
-- [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) – Linting made easy and integrated.
-- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) – Code formatting with style.
-- [Jest](https://marketplace.visualstudio.com/items?itemName=Orta.vscode-jest) – Smooth integration for running and debugging tests.
+Treat generated paths (`lib/`, `dist/`, `docs/`, `.decaf-docs/`, `tmp/`, coverage reports) as
+disposable. Rebuild them; do not merge them.
 
-We've included a pre-configured `settings.json` that ensures:
+### Continuous integration and releases
 
-- **Linting and formatting** are automatically applied on file save.
-- **Jest** works seamlessly with your test suite out of the box.
+GitHub Actions run the test, coverage, CodeQL, dependency, Pages, release, and Docker workflows.
+Pages deploys the generated site from version tags. Docker publishing is a thin caller of the
+shared `decaf-ts/reusable-actions` workflow and publishes `ghcr.io/decaf-ts/docaf:<version>` and
+`latest`; see [DOCKER.md](../../DOCKER.md) for inputs and secrets.
 
-#### Tasks & Launchers
+Release automation is driven by tags:
 
-Common tasks like `build`, `test`, and others are pre-configured as **VSCode Tasks** and **Launch Configurations**.
+```bash
+npm run release
+```
 
-To access and run them:
+`bin/tag-release.sh` runs `prepare-release` (lint, production build, coverage, distribution
+tests, docs), commits if needed, and creates and pushes the version tag. The release workflow
+then publishes the package and the documentation. Never create release tags from a dirty or
+unverified tree.
 
-- Open the Command Palette (`Cmd/Ctrl + Shift + P`) and select `Tasks: Run Task`.
-- Or go to the **Run and Debug** panel, choose a configuration from the dropdown, and press ▶️.
+### Common pitfalls
 
----
-
-### WebStorm
-
-For **WebStorm** users, everything comes integrated right out of the box 🎉  
-Common commands for builds, tests, and documentation generation are available in the **Run/Debug configurations** dropdown for quick access and execution via:
-
- - Jest integration:
-   - `tests/Unit Tests` - Runs all unit tests (analog to `test:unit`)
-   - `tests/Integration Tests` - Runs all integration tests (analog to `test:integration`)
-   - `tests/Bundling Tests` - Runs the dist checks for compiled artifacts (analog to `test:dist`)
-   - `All Tests` - Runs all tests (analog to `test:all`)
-
- - Node integration:
-   - `repo/docs` - Builds documentation (analog to `docs`)
-   - `repo/coverage` - runs `test:all`, collects coverage (csv, HTML), generates test reports (junit, HTML) (analog to `coverage`)
-   - `repo/uml` - builds uml into png files (analog to `uml`)
-   - `repo/test:circular` - test code for circular dependencies (analog to `test:circular`)
-   - `repo/lint-fix` - tries to fix linting issues (analog to `lint-fix`)
-   - `repo/drawings` - compiles draw.io files to png (one per page) (analog to `drawings`)
-   - `repo/flash-forward` - updates all dependencies to latest versions (analog to `flash-forward`)
-  - `repo/update-scripts` - runs cli to update repo's configs (CI, Doc boilerplate, Linting, Style, etc) via its template repository (analog to `update-scripts`)
-   - `build:prod` - `build`s code in production mode (minify, uglify, doc extraction, and no source-map for bundled production)
-   - `build` - `build`s code in development mode
-
-## Considerations
-
-- Setup for node 22, but will work at least with 16;
-- Requires docker to build documentation (drawings and PlantUML)
+- Running `decaf docs` from the wrong directory: config discovery starts at the current
+  directory, and without `--config` an absent file produces default configuration, while a
+  missing explicit `--config` path produces `DOCAF_CONFIG_MISSING`.
+- Editing `README.md` directly: the next `npm run readme` overwrites it.
+- Assuming renderers can mutate the snapshot: they cannot; `snapshot` is the shareable,
+  target-independent artifact.
+- Building Docker with `--build-arg` for credentials: use the `TOKEN` BuildKit secret.
+- Mounting `/output` at a path the `node` user cannot write: pass
+  `--user "$(id -u):$(id -g)" -e HOME=/tmp`.

@@ -1,10 +1,15 @@
 name: "Docker Publish"
 
 # Thin caller of decaf-ts/reusable-actions/.github/workflows/docker-publish.yml.
-# Builds and publishes this repo's docker image(s) to the configured
-# registries (default ghcr.io), running in parallel with publish-on-release
-# (npm) on every GitHub Release. Manual dispatch defaults to a full
-# build/test and a trivy scan (no renovate) before the image build.
+# Publishes this repository's runtime image as ghcr.io/decaf-ts/docaf with the
+# package version and the floating `latest` tag. It runs on every GitHub
+# Release, in parallel with publish-on-release (npm), and can be dispatched
+# manually.
+#
+# On release the version comes from package.json at the release tag, so the
+# image tag matches the npm version. Release builds skip the reusable
+# build/test and trivy gates because the release pipeline already ran them;
+# manual dispatch defaults to running both before the image build.
 
 on:
   release:
@@ -50,17 +55,17 @@ on:
         default: true
 
 jobs:
-  docker-base:
-    name: Docker base image
+  docker:
+    name: Docker image
     uses: decaf-ts/reusable-actions/.github/workflows/docker-publish.yml@master
     with:
-      image: decaf-ts/ts-workspace
+      image: decaf-ts/docaf
       dockerfile: Dockerfile
       context: .
-      tag-prefix: "base-"
+      tag-prefix: ""
       floating-tag: latest
       version-tag: ${{ inputs.version-tag }}
-      push: ${{ inputs.push != false }}
+      push: ${{ github.event_name != 'workflow_dispatch' || inputs.push != false }}
       platforms: ${{ inputs.platforms || 'linux/amd64' }}
       no-cache: ${{ inputs.no-cache == true }}
       registries: ${{ inputs.registries || 'ghcr.io' }}

@@ -13,7 +13,9 @@ The Angular renderer toolchain (`@angular/cli`, `@angular/build`, `@angular/comp
 
 ## Commands
 
-Run the commands from the package root (the directory containing `tsconfig.json`).
+Run the commands from the package root (the directory containing `tsconfig.json`). When
+`--config` is given, the configuration file's directory becomes the project root, so relative
+source, snapshot, and target paths resolve from there.
 
 ```bash
 decaf docs init                  # write a default decafdocs.config.ts
@@ -29,7 +31,7 @@ decaf docs build [--config <path>] [--renderer <name> | --targets <list>]
 
 - `--config <path>` selects a config file explicitly.
 - `--renderer <name>` builds only targets using that renderer.
-- `--targets <list>` builds only the listed renderer names (comma separated).
+- `--targets <list>` builds only the listed renderer names (comma or space separated).
 - `--renderer` and `--targets` are mutually exclusive.
 
 Without a config file the command uses the documented defaults, so a project with `src/**/*.ts` and a `tsconfig.json` can run `decaf docs build` directly.
@@ -61,8 +63,8 @@ project writable at `/workspace` and point the target output at a separate
 ```bash
 docker run --rm \
   -v "$PWD:/workspace" \
-  -v "$PWD/dist/docs:/output" \
-  decaf-ts/docaf:latest build --config /workspace/decafdocs.config.mjs
+  -v "$PWD/dist:/output" \
+  ghcr.io/decaf-ts/docaf:latest build --config /workspace/decafdocs.config.mjs
 ```
 
 docaf writes its snapshot and build cache under the project root before targets
@@ -139,16 +141,43 @@ Extraction and publishing are skipped when the source files, compiler options, p
 
 ## Diagnostics
 
-Errors are reported as `DOCAF_*` codes and the command exits with status 1. Common codes:
+Errors are reported as `DOCAF_*` codes and the command exits with status 1. Configuration and
+selection codes:
 
 - `DOCAF_CONFIG_MISSING` — `--config` points at a file that does not exist
-- `DOCAF_CONFIG_TSCONFIG_MISSING` — `source.tsconfig` does not exist
+- `DOCAF_CONFIG_EXISTS` — `init` refused to overwrite an existing file
+- `DOCAF_CONFIG_INVALID` / `DOCAF_CONFIG_UNSUPPORTED` — the config export is not an object, or
+  the file extension is not supported
+- `DOCAF_CONFIG_TRANSPILE` — a TypeScript config could not be transpiled
 - `DOCAF_CONFIG_UNKNOWN_OPTION` — unknown top-level configuration key
-- `DOCAF_NO_SOURCES` — no files matched `source.include`
+- `DOCAF_CONFIG_SOURCE` / `DOCAF_CONFIG_TARGET_INVALID` — malformed `source` or `targets`
+- `DOCAF_CONFIG_TSCONFIG_MISSING` / `DOCAF_CONFIG_TSCONFIG_INVALID` — `source.tsconfig` is absent
+  or cannot be parsed
+- `DOCAF_CONFIG_PLUGINS` / `DOCAF_PLUGIN_UNSUPPORTED` — malformed or unknown plugin names
+- `DOCAF_CONFIG_EXTRACTORS` / `DOCAF_COMPONENT_EXTRACTOR_UNSUPPORTED` — malformed or unknown
+  component extractors
+- `DOCAF_CONFIG_STORAGE_UNSUPPORTED` / `DOCAF_CONFIG_SNAPSHOT_UNSUPPORTED` — unsupported storage
+  adapter, snapshot format, or schema version
+- `DOCAF_NO_SOURCES` / `DOCAF_SOURCE_MISSING` — no source files matched, or a selected file is
+  missing
+- `DOCAF_NO_TARGETS` — no target was selected for the build
 - `DOCAF_RENDERER_UNSUPPORTED` — renderer is not implemented (REN-10)
 - `DOCAF_TARGET_NOT_CONFIGURED` — selection matched no configured target
 - `DOCAF_CLI_SELECTION_CONFLICT` — `--renderer` and `--targets` used together
 - `DOCAF_SNAPSHOT_MUTATED` — a renderer modified the published snapshot
+- `DOCAF_PACKAGE_ROOT` — the docaf package root could not be located; install it or set
+  `DOCAF_PACKAGE_ROOT`
+
+Extraction and publication codes:
+
+- `DOCAF_TS_<n>` — a TypeScript diagnostic from the documented program
+- `DOCAF_ANONYMOUS_DECLARATION` — a declaration has no name to document
+- `DOCAF_IMPORT_TYPE_UNRESOLVED` — an `import("...")` type could not be resolved
+- `DOCAF_COMPONENT_DECLARATION_MISSING` / `DOCAF_COMPONENT_EXTRACTION_EMPTY` — an `@component`
+  doclet has no matching class, or the extractor produced nothing
+- `DOCAF_COMPONENT_EXTRACTOR_MISSING` — no registered extractor supports the component
+- `DOCAF_LOAD_MISSING` / `DOCAF_LOAD_TRAVERSAL` — a `@load` file is unreadable or escapes the
+  allowed documentation root
 
 ## Programmatic use
 

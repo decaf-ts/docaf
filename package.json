@@ -82,6 +82,7 @@
     "test:integration": "jest --testPathPatterns=\"/tests/(integration)\" --passWithNoTests --detectOpenHandles",
     "test:all": "jest --testPathPatterns=\"/tests\" --passWithNoTests --detectOpenHandles",
     "test:parity": "node scripts/parity/check.mjs",
+    "test:docker": "bash bin/docker-smoke.sh",
     "parity:baseline": "node scripts/parity/generate-baseline.mjs",
     "test:e2e": "npm run build && node --experimental-strip-types tests/e2e/docs-angular-static-app.e2e.ts",
     "test:dist": "TEST_TARGET=lib npm run test:all && TEST_TARGET=dist npm run test:all",
@@ -100,13 +101,11 @@
     "repo:pr": "npm run repo:doc && npm run repo:tests && npm run repo:readme",
     "drawings": "for FILE in workdocs/drawings/*.drawio; do echo \"converting $FILE to image...\" && docker run --rm -v $(pwd):/data rlespinasse/drawio-export --format png $FILE; done && cp -rf workdocs/drawings/export/* workdocs/resources/",
     "uml": "cd workdocs/uml && for FILE in ./*.puml; do docker run --rm -v $(pwd):/work -w /work miy4/plantuml -DPLANTUML_LIMIT_SIZE=8192 -tpng $FILE; done && cd ../.. && cp -fr workdocs/uml/*.png workdocs/resources/",
-    "docs": "npx rimraf ./docs && mkdir docs && NODE_ENV=development build-scripts --docs",
-    "publish-docs": "docker run -it --rm --user $(id -u):$(id -g) -v \"$(pwd)/workdocs/confluence:/content\" -e ATLASSIAN_API_TOKEN=\"$(DECAF_BANNER=false decaf utils credentials get --name confluence --logLevel error)\" ghcr.io/markdown-confluence/publish:latest",
+    "docs": "npm run readme && npx rimraf ./docs && npm run build && decaf docs build",
     "docker:login": "docker login ghcr.io -u \"$(DECAF_BANNER=false decaf utils credentials get --name docker-user --legacy-file .dockeruser --logLevel error)\" -p \"$(DECAF_BANNER=false decaf utils credentials get --name docker --legacy-file .dockertoken --logLevel error)\"",
-    "docker:build": "npm run docker:build-base",
-    "docker:build-base": "NPM_TOKEN=\"$(DECAF_BANNER=false decaf utils credentials get --name npm --logLevel error)\" DOCKER_BUILDKIT=1 docker build --secret id=TOKEN,env=NPM_TOKEN -t ghcr.io/decaf-ts/ts-workspace:base-$(cat package.json | jq -r '.version') -t ghcr.io/decaf-ts/ts-workspace:base-${VERSION:-latest} -f ./Dockerfile .",
-    "docker:publish": "npm run docker:publish-base",
-    "docker:publish-base": "docker push ghcr.io/decaf-ts/ts-workspace:base-$(cat package.json | jq -r '.version') && docker push ghcr.io/decaf-ts/ts-workspace:base-${VERSION:-latest}"
+    "docker:build": "NPM_TOKEN=\"$(DECAF_BANNER=false decaf utils credentials get --name npm --logLevel error)\" DOCKER_BUILDKIT=1 docker build --secret id=TOKEN,env=NPM_TOKEN -t ghcr.io/decaf-ts/docaf:$(node -p \"require('./package.json').version\") -t ghcr.io/decaf-ts/docaf:${VERSION:-latest} -f ./Dockerfile .",
+    "docker:publish": "docker push ghcr.io/decaf-ts/docaf:$(node -p \"require('./package.json').version\") && docker push ghcr.io/decaf-ts/docaf:${VERSION:-latest}",
+    "readme": "npx markdown-include ./workdocs/readme-md.json"
   },
   "repository": {
     "type": "git",
@@ -178,6 +177,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
+    "@decaf-ts/cli": "^0.13.2",
     "@decaf-ts/utils": "^1.11.1",
     "@eslint/js": "^9.39.5",
     "@faker-js/faker": "^9.9.0",
@@ -189,8 +189,6 @@
     "jest": "^30.4.2",
     "jest-html-reporters": "^3.1.7",
     "jest-junit": "^17.0.0",
-    "jsdoc": "^4.0.5",
-    "jsdoc-mermaid": "^1.0.0",
     "markdown-include": "^0.4.3",
     "playwright": "^1.64.1",
     "prettier": "^3.8.3",
