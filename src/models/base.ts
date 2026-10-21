@@ -1,6 +1,4 @@
-import { Metadata } from "@decaf-ts/decoration";
-import { Operations } from "@decaf-ts/db-decorators";
-import { Model, model, type ModelArg } from "@decaf-ts/decorator-validation";
+import { Model, type ModelArg } from "@decaf-ts/decorator-validation";
 
 /**
  * @description Abstract base class for all documentation models stored in the docs snapshot tables.
@@ -9,6 +7,7 @@ import { Model, model, type ModelArg } from "@decaf-ts/decorator-validation";
  * publication artifacts, component metadata, ...) extends this class and declares its own `uid`
  * primary key, which is a deterministic composite id produced by {@link DocsIds}.
  * @class DocsModel
+ * @category Models
  */
 export abstract class DocsModel extends Model {
   /**
@@ -27,6 +26,9 @@ export abstract class DocsModel extends Model {
  * @summary Used as the first segment of every composite id built by {@link DocsIds}, so ids can be
  * traced back to their table/model without inspecting the record itself. One literal per docs table
  * (e.g. `"doclet"`, `"tag"`, `"component-preview"`, `"manifest"`).
+ * @typedef {string} DocsIdKind
+ * @category Models
+ * @memberOf module:docaf
  */
 export type DocsIdKind =
   | "doclet"
@@ -72,6 +74,8 @@ function join(kind: DocsIdKind, ...values: Array<string | number | undefined>): 
  * @example
  * DocsIds.doclet("my-package", "my-package.Ns.Class#method"); // "doclet:my-package:my-package.Ns.Class#method"
  * DocsIds.signature("doclet:my-package:Foo", 0); // "signature:doclet:my-package:Foo:0"
+ * @category Models
+ * @memberOf module:docaf
  */
 export const DocsIds = {
   doclet(packageName: string, symbolPath: string): string {
@@ -184,98 +188,3 @@ export const DocsIds = {
     return join("manifest", projectName, buildId);
   },
 } as const;
-
-function migrateHandlerNames(
-  value: unknown,
-  previous: string,
-  name: string,
-  seen: Set<unknown>
-): void {
-  if (!value || typeof value !== "object" || seen.has(value)) return;
-  seen.add(value);
-  const record = value as Record<string, unknown>;
-  const handlers = record.handlers;
-  if (handlers && typeof handlers === "object") {
-    const entries = handlers as Record<string, unknown>;
-    if (previous in entries) {
-      entries[name] = entries[previous];
-      delete entries[previous];
-    }
-  }
-  for (const child of Object.values(record))
-    migrateHandlerNames(child, previous, name, seen);
-}
-
-function cloneMetadata(value: any): any {
-  if (Array.isArray(value)) return value.map(cloneMetadata);
-  if (
-    value &&
-    typeof value === "object" &&
-    Object.getPrototypeOf(value) === Object.prototype
-  ) {
-    const copy: Record<string, any> = {};
-    Object.keys(value).forEach((key) => {
-      copy[key] = cloneMetadata(value[key]);
-    });
-    return copy;
-  }
-  return value;
-}
-
-/**
- * @description Class decorator that applies `@model()` under a given logical name, remapping any
- * metadata already registered under the original class name.
- * @summary Renames the class constructor to `name`, moves operation-registry entries and cloned
- * decoration metadata (including property indexes and recursive `handlers` name maps) from the
- * original class name's metadata symbol to the new one, then delegates to `model()`. Used because
- * docs models are declared with their production class names but must be registered under stable
- * logical names (e.g. `@docsModel("DocletModel")`) so metadata survives minification or renaming.
- * @param {string} name - Logical model name to register the class under.
- * @returns {ClassDecorator} The decorator to apply on the model class.
- */
-export function docsModel(name: string): ClassDecorator {
-  return (target) => {
-    const ctor = target as unknown as { name: string; toString(): string };
-    const previous = ctor.name;
-    const oldSymbol = Symbol.for([ctor.toString(), previous].join(" - "));
-    const MetadataStore = Metadata as any;
-    const oldMetadata = MetadataStore.innerGet(oldSymbol);
-    const oldIndex = MetadataStore._propertiesIndex[oldSymbol];
-    Object.defineProperty(ctor, "name", {
-      value: name,
-      configurable: true,
-    });
-    const registry = (
-      Operations as unknown as {
-        getOpRegistry(): { cache?: Record<string, unknown> };
-      }
-    ).getOpRegistry();
-    const operations = registry.cache;
-    if (operations && previous !== name && operations[previous]) {
-      operations[name] = Object.assign(
-        {},
-        operations[previous],
-        operations[name] ?? {}
-      );
-      delete operations[previous];
-    }
-    const newSymbol = Symbol.for([ctor.toString(), name].join(" - "));
-    if (oldMetadata)
-      MetadataStore._metadata[newSymbol] = cloneMetadata(oldMetadata);
-    if (oldIndex) MetadataStore._propertiesIndex[newSymbol] = new Set(oldIndex);
-    if (previous !== name && MetadataStore._metadata[newSymbol]) {
-      migrateHandlerNames(
-        MetadataStore._metadata[newSymbol],
-        previous,
-        name,
-        new Set()
-      );
-    }
-    const decorated = model()(target as never) as never;
-    if (Symbol.keyFor(oldSymbol) !== Symbol.keyFor(newSymbol)) {
-      delete MetadataStore._metadata[oldSymbol];
-      delete MetadataStore._propertiesIndex[oldSymbol];
-    }
-    return decorated;
-  };
-}

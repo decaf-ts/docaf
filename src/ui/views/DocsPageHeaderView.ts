@@ -1,7 +1,7 @@
 import { prop } from "@decaf-ts/decoration";
-import { Model, type ModelArg } from "@decaf-ts/decorator-validation";
-import { docsModel } from "../../models/base";
+import { Model, model, required, type ModelArg } from "@decaf-ts/decorator-validation";
 import { uielement, uimodel } from "@decaf-ts/ui-decorators";
+import { stableName } from "../../models/naming";
 import { DocsElements } from "../rendering/DocsSemanticTags";
 
 /**
@@ -10,12 +10,15 @@ import { DocsElements } from "../rendering/DocsSemanticTags";
  * level-1 heading plus optional kind, category, and summary text. Built by
  * DocsPageService from the page record and its root doclet.
  * @class DocsPageHeaderView
+ * @category UI
  */
 @uimodel(DocsElements.SYMBOL)
-@docsModel("DocsPageHeaderView")
+@model()
+@stableName("DocsPageHeaderView")
 export class DocsPageHeaderView extends Model {
   @uielement(DocsElements.HEADING, { level: 1 })
   @prop()
+  @required()
   title!: string;
 
   @uielement(DocsElements.TEXT)

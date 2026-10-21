@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import vm from "node:vm";
 import { AngularDocsBuildTarget } from "../../src/build/AngularDocsBuildTarget";
 import type { DocsBuildContext } from "../../src/build/DocsBuildTarget";
 import {
@@ -14,6 +15,12 @@ function codesOf(error: unknown): string[] {
   return (
     (error as { diagnostics?: { code: string }[] }).diagnostics ?? []
   ).map((entry) => entry.code);
+}
+
+function evaluatedGlobal(script: string): Record<string, unknown> {
+  const sandbox: Record<string, unknown> = {};
+  vm.runInNewContext(script, sandbox);
+  return sandbox;
 }
 
 interface Project {
@@ -217,6 +224,56 @@ describe("AngularDocsBuildTarget prepare", () => {
     expect(registry).not.toContain(`module[${maliciousExport}]`);
   });
 
+  it("writes the file-mode snapshot and i18n data scripts and a file-aware app config", async () => {
+    const snapshot = cloneFixture();
+    const fixture = project("docaf-target-file-mode-", snapshot);
+    const target = targetFor(fixture.root);
+
+    await target.prepare(fixture.context);
+
+    const appDir = path.join(
+      fixture.context.outputDirectory,
+      ".docaf-angular-app"
+    );
+    const snapshotScript = fs.readFileSync(
+      path.join(appDir, "public", "assets", "docs", "snapshot.js"),
+      "utf8"
+    );
+    const i18nScript = fs.readFileSync(
+      path.join(appDir, "public", "assets", "i18n", "en.js"),
+      "utf8"
+    );
+    const appConfig = fs.readFileSync(
+      path.join(appDir, "src", "app", "app.config.ts"),
+      "utf8"
+    );
+    const en = JSON.parse(
+      fs.readFileSync(
+        path.join(appDir, "public", "assets", "i18n", "en.json"),
+        "utf8"
+      )
+    );
+
+    expect(snapshotScript).toContain(
+      "globalThis.__DOCAF_DOCS_SNAPSHOT__ = JSON.parse("
+    );
+    expect(evaluatedGlobal(snapshotScript).__DOCAF_DOCS_SNAPSHOT__).toEqual(
+      snapshot
+    );
+    expect(i18nScript).toContain(
+      "globalThis.__DOCAF_DOCS_I18N__ = JSON.parse("
+    );
+    expect(evaluatedGlobal(i18nScript).__DOCAF_DOCS_I18N__).toEqual({ en });
+
+    expect(appConfig).toContain('location.protocol !== "file:"');
+    expect(appConfig).toContain("__DOCAF_DOCS_SNAPSHOT__");
+    expect(appConfig).toContain(
+      "new DocsAngularRuntime(DOCS_PREVIEWS as any, fileSnapshot())"
+    );
+    expect(appConfig).toContain("__DOCAF_DOCS_I18N__");
+    expect(appConfig).not.toContain("assets/i18n/en.json");
+  });
+
   it("generates a synthetic preview when the component source cannot be imported", async () => {
     const snapshot = cloneFixture();
     snapshot.tables.components[0].sourceFile = "src/does-not-exist.ts";
@@ -266,6 +323,124 @@ describe("AngularDocsBuildTarget prepare", () => {
     );
     expect(indexHtml).not.toContain("<script>\"x\"</script>");
     expect(indexHtml).toContain('href="/docs/&quot;quoted&quot;/"');
+  });
+});
+
+describe("AngularDocsBuildTarget classic file output (SAA-1163)", () => {
+  it("bundles the Angular entry into a classic IIFE main.js and rewrites index.html", async () => {
+    const fixture = project("docaf-target-classic-");
+    fixture.context.config.output = { baseHref: "./" };
+    const dist = path.join(
+      fixture.context.outputDirectory,
+      ".docaf-angular-app",
+      "dist",
+      "browser"
+    );
+    writeFile(
+      dist,
+      "main-ABC123.js",
+      'import "./chunk-XYZ.js";\nglobalThis.__MAIN__ = true;\n'
+    );
+    writeFile(
+      dist,
+      "polyfills-ABC123.js",
+      "globalThis.__POLYFILLS__ = true;\n"
+    );
+    writeFile(dist, "polyfills-ABC123.js.map", "{}");
+    writeFile(dist, "chunk-XYZ.js", "globalThis.__CHUNK__ = true;\n");
+    writeFile(dist, "styles-ABC.css", "body{}");
+    writeFile(
+      dist,
+      "index.html",
+      `<!doctype html>
+<html><head><base href="/">
+<link rel="modulepreload" href="chunk-XYZ.js">
+<script src="polyfills-ABC123.js" type="module"></script>
+<script src="main-ABC123.js" type="module"></script>
+</head><body><docs-root></docs-root></body></html>`
+    );
+    const target = targetFor(fixture.root);
+
+    await (
+      target as unknown as {
+        bundleClassicScripts(distDir: string): Promise<void>;
+      }
+    ).bundleClassicScripts(dist);
+    await (
+      target as unknown as {
+        rewriteStaticIndex(
+          context: DocsBuildContext,
+          distDir: string
+        ): Promise<void>;
+      }
+    ).rewriteStaticIndex(fixture.context, dist);
+
+    const entries = fs.readdirSync(dist).sort();
+    expect(entries).toContain("main.js");
+    expect(entries).toContain("styles-ABC.css");
+    expect(
+      entries.filter((entry) =>
+        /^(?:chunk-.*|main(?:-[^.]+)?|polyfills(?:-[^.]+)?)\.js(?:\.map)?$/.test(
+          entry
+        )
+      )
+    ).toEqual(["main.js"]);
+
+    const main = fs.readFileSync(path.join(dist, "main.js"), "utf8");
+    expect(main).toContain("__MAIN__");
+    expect(main).toContain("__POLYFILLS__");
+    expect(main).toContain("__CHUNK__");
+    expect(main).not.toMatch(/(^|\W)import\s+["'.\w]/);
+
+    const html = fs.readFileSync(path.join(dist, "index.html"), "utf8");
+    expect(html).not.toContain('type="module"');
+    expect(html).not.toContain("modulepreload");
+    expect(html).toContain('<base href="./">');
+
+    const bootstrap = [
+      '<script src="assets/docs/snapshot.js"></script>',
+      '<script src="assets/i18n/en.js"></script>',
+      '<script src="file-protocol-shim.js"></script>',
+      '<script src="main.js"></script>',
+    ];
+    let cursor = -1;
+    for (const tag of bootstrap) {
+      const index = html.indexOf(tag);
+      expect(index).toBeGreaterThan(cursor);
+      cursor = index;
+    }
+
+    const shim = fs.readFileSync(
+      path.join(dist, "file-protocol-shim.js"),
+      "utf8"
+    );
+    expect(shim).toContain('location.protocol !== "file:"');
+    expect(shim).toContain("history.pushState");
+    expect(shim).toContain("history.replaceState");
+    expect(shim).toContain("location.hash = hash");
+  });
+
+  it("reports a build output without a main bundle", async () => {
+    const fixture = project("docaf-target-classic-missing-");
+    const dist = path.join(
+      fixture.context.outputDirectory,
+      ".docaf-angular-app",
+      "dist",
+      "browser"
+    );
+    writeFile(dist, "chunk-XYZ.js", "globalThis.__CHUNK__ = true;\n");
+    const target = targetFor(fixture.root);
+
+    try {
+      await (
+        target as unknown as {
+          bundleClassicScripts(distDir: string): Promise<void>;
+        }
+      ).bundleClassicScripts(dist);
+      throw new Error("expected bundleClassicScripts to fail");
+    } catch (error) {
+      expect(codesOf(error)).toEqual(["DOCS_ANGULAR_OUTPUT_MISSING"]);
+    }
   });
 });
 

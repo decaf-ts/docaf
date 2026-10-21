@@ -6,6 +6,7 @@ import type { SourceLocation } from "./types";
  * @summary Distinguishes `error` diagnostics, which abort the build via
  * {@link DocsDiagnostics.assertClean}, from `warning` diagnostics, which are
  * recorded but tolerated.
+ * @memberOf module:docaf
  */
 export type DocsDiagnosticSeverity = "error" | "warning";
 

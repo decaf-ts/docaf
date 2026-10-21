@@ -180,6 +180,7 @@ export class DocumentationCompiler {
  * helpers).
  * @param {DocumentationCompilerConfig} config - The compiler configuration.
  * @returns {DocumentationCompilerConfig} The same configuration object.
+ * @memberOf module:docaf
  */
 export function defineDocsConfig(
   config: DocumentationCompilerConfig

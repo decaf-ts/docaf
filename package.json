@@ -101,7 +101,7 @@
     "repo:pr": "npm run repo:doc && npm run repo:tests && npm run repo:readme",
     "drawings": "for FILE in workdocs/drawings/*.drawio; do echo \"converting $FILE to image...\" && docker run --rm -v $(pwd):/data rlespinasse/drawio-export --format png $FILE; done && cp -rf workdocs/drawings/export/* workdocs/resources/",
     "uml": "cd workdocs/uml && for FILE in ./*.puml; do docker run --rm -v $(pwd):/work -w /work miy4/plantuml -DPLANTUML_LIMIT_SIZE=8192 -tpng $FILE; done && cd ../.. && cp -fr workdocs/uml/*.png workdocs/resources/",
-    "docs": "npm run readme && npx rimraf ./docs && npm run build && decaf docs build",
+    "docs": "npm run readme && npx rimraf ./docs && npm run build && decaf docs build --tsconfig ./tsconfig.json --include \"src/**/*.ts\" --exclude \"**/*.spec.ts\" \"**/*.test.ts\" \"**/*.d.ts\" --renderer angular --output ./docs --base-href ./ --configuration production",
     "docker:login": "docker login ghcr.io -u \"$(DECAF_BANNER=false decaf utils credentials get --name docker-user --legacy-file .dockeruser --logLevel error)\" -p \"$(DECAF_BANNER=false decaf utils credentials get --name docker --legacy-file .dockertoken --logLevel error)\"",
     "docker:build": "NPM_TOKEN=\"$(DECAF_BANNER=false decaf utils credentials get --name npm --logLevel error)\" DOCKER_BUILDKIT=1 docker build --secret id=TOKEN,env=NPM_TOKEN -t ghcr.io/decaf-ts/docaf:$(node -p \"require('./package.json').version\") -t ghcr.io/decaf-ts/docaf:${VERSION:-latest} -f ./Dockerfile .",
     "docker:publish": "docker push ghcr.io/decaf-ts/docaf:$(node -p \"require('./package.json').version\") && docker push ghcr.io/decaf-ts/docaf:${VERSION:-latest}",

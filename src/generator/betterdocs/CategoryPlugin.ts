@@ -9,6 +9,7 @@ import type { DecafDocsPlugin } from "../types";
  * the pipeline to supply tags from sources other than the doclet itself.
  * @param {DocletModel} doclet - The doclet whose tags should be resolved.
  * @returns {DocTagModel[]} The tags to scan; never null, empty when none exist.
+ * @memberOf module:docaf
  */
 export type TagResolver = (doclet: DocletModel) => readonly DocTagModel[];
 

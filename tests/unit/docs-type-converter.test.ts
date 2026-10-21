@@ -8,6 +8,7 @@ import {
   fillMethodComment,
   getName,
   getCommentAsString,
+  getDescriptionAsString,
   getTypeName,
   parseJsDocTags,
   TypeConverter,
@@ -15,6 +16,7 @@ import {
 import { DocsIds, type DocletModel } from "../../src/models";
 import {
   KINDS_FIXTURE,
+  DESCRIPTIONS_FIXTURE,
   VERTICAL_SLICE,
   capturingEmitter,
   contextForFile,
@@ -448,5 +450,108 @@ describe("TypeConverter helper parity", () => {
     );
 
     expect(store.counts().doclets).toBeGreaterThan(0);
+  });
+});
+
+describe("TypeConverter description lifting", () => {
+  const context = contextForFile(DESCRIPTIONS_FIXTURE);
+
+  function convertDescriptions() {
+    const capture = capturingEmitter();
+    const converter = new TypeConverter(capture.emitter, {
+      packageName: "docaf-descriptions",
+    });
+    converter.convertFile(context);
+    return capture;
+  }
+
+  function declarationNamed(
+    capture: ReturnType<typeof convertDescriptions>,
+    name: string
+  ) {
+    const declaration = capture.declarations.find(
+      (entry) => entry.name === name
+    );
+    if (!declaration) throw new Error(`Missing declaration ${name}`);
+    return declaration;
+  }
+
+  it("keeps pre-tag prose ahead of @description and @summary tags", () => {
+    const proseWins = statementOf(context, "ProseWins");
+    expect(getCommentAsString(proseWins, context.source)).toBe(
+      "Pre-tag prose wins over every tag."
+    );
+    expect(getDescriptionAsString(proseWins, context.source)).toBe(
+      "Pre-tag prose wins over every tag."
+    );
+
+    const declaration = declarationNamed(
+      convertDescriptions(),
+      "ProseWins"
+    );
+    expect(declaration.description).toBe("Pre-tag prose wins over every tag.");
+    expect(declaration.classdesc).toBe("Pre-tag prose wins over every tag.");
+    expect(
+      declaration.tags.find((tag) => tag.title === "description")?.value
+    ).toBe("Tag description loses.");
+    expect(
+      declaration.tags.find((tag) => tag.title === "summary")?.value
+    ).toBe("Tag summary loses.");
+  });
+
+  it("fills a class description from @description when prose is empty", () => {
+    expect(
+      getCommentAsString(statementOf(context, "DescriptionOnly"), context.source)
+    ).toBe("");
+    const declaration = declarationNamed(
+      convertDescriptions(),
+      "DescriptionOnly"
+    );
+    expect(declaration.description).toBe("Description tag fills the gap.");
+    expect(declaration.classdesc).toBe("Description tag fills the gap.");
+  });
+
+  it("fills a class description from @summary when only @summary is present", () => {
+    expect(
+      getCommentAsString(statementOf(context, "SummaryOnly"), context.source)
+    ).toBe("");
+    const declaration = declarationNamed(
+      convertDescriptions(),
+      "SummaryOnly"
+    );
+    expect(declaration.description).toBe("Summary tag fills the gap.");
+  });
+
+  it("prefers @description over @summary when both are present", () => {
+    const declaration = declarationNamed(convertDescriptions(), "BothTags");
+    expect(declaration.description).toBe("Description wins over summary.");
+    expect(
+      declaration.tags.map((tag) => tag.title)
+    ).toEqual(expect.arrayContaining(["description", "summary"]));
+  });
+
+  it("resolves tag-first class members through the same path", () => {
+    const capture = convertDescriptions();
+    const taggedField = capture.members.find(
+      (member) => member.longname === "docaf-descriptions.TaggedMembers.taggedField"
+    );
+    expect(taggedField).toBeDefined();
+    expect(taggedField!.description).toBe(
+      "Member description wins over summary."
+    );
+
+    const summaryMethod = capture.members.find(
+      (member) => member.longname === "docaf-descriptions.TaggedMembers.summaryMethod"
+    );
+    expect(summaryMethod).toBeDefined();
+    expect(summaryMethod!.description).toBe("Method summary fills the gap.");
+  });
+
+  it("resolves a tag-first namespace container description", () => {
+    const container = declarationNamed(convertDescriptions(), "descriptions");
+    expect(container.kind).toBe("namespace");
+    expect(container.description).toBe(
+      "Namespace description fills the gap."
+    );
   });
 });

@@ -1,0 +1,18 @@
+.docs-source {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--docs-border, #d7dbe0);
+  border-radius: 0.6rem;
+  background: var(--docs-surface, #f7f8fa);
+}
+.docs-source-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+.docs-source-file code {
+  font-size: 0.9rem;
+}
+.docs-source-repository {
+  margin: 0.35rem 0 0;
+  font-size: 0.86rem;
+}

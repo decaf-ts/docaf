@@ -1,0 +1,8 @@
+.docs-site-footer {
+  border-top: 1px solid var(--docs-border, #d7dbe0);
+  margin-top: 3rem;
+  padding: 1.25rem 1.5rem;
+  color: var(--docs-muted, #5f6b7a);
+  font-size: 0.85rem;
+  text-align: center;
+}

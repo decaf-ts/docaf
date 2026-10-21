@@ -5,6 +5,7 @@ import { DocLinkModel, DocRouteModel, DocsIds, type DocletModel } from "../model
  * @summary `hash` prefixes hrefs with `#` for static deployments that cannot
  * rewrite URLs, while `history` emits bare paths for servers with a docs
  * fallback route. Stored routes stay renderer-independent either way.
+ * @memberOf module:docaf
  */
 export type LinkRouting = "hash" | "history";
 
@@ -94,6 +95,7 @@ function slug(value: string): string {
  * @param {DocletModel} doclet - The doclet whose page kind is being derived.
  * @returns {string} The normalized page kind ("component", "member", or the
  * doclet's original kind).
+ * @memberOf module:docaf
  */
 export function pageKindOf(doclet: DocletModel): string {
   if (doclet.componentId) return "component";
@@ -102,9 +104,10 @@ export function pageKindOf(doclet: DocletModel): string {
 }
 
 /**
- * Port of `helper.createLink()` / `helper.registerLink()` as data.
- * Longnames map to portable routes; members add anchors. The default href
+ * @description Port of `helper.createLink()` / `helper.registerLink()` as data.
+ * @summary Longnames map to portable routes; members add anchors. The default href
  * format is hash routing, but stored routes stay renderer-independent.
+ * @class LinkRegistry
  */
 export class LinkRegistry {
   private readonly routing: "hash" | "history";
@@ -123,9 +126,21 @@ export class LinkRegistry {
     const routes: DocRouteModel[] = [];
     const links: DocLinkModel[] = [];
     const byUid = new Map(doclets.map((doclet) => [doclet.uid, doclet]));
+    const containerUids = new Set(
+      doclets
+        .filter(
+          (doclet) => doclet.kind === "module" || doclet.kind === "namespace"
+        )
+        .map((doclet) => doclet.uid)
+    );
 
     for (const doclet of doclets) {
-      if (doclet.memberofUid || doclet.memberof) continue;
+      if (doclet.memberofUid || doclet.memberof) {
+        const ownerIsContainer =
+          doclet.memberofUid !== undefined &&
+          containerUids.has(doclet.memberofUid);
+        if (!ownerIsContainer) continue;
+      }
       if (!PAGE_KINDS.has(doclet.kind) && !doclet.componentId) continue;
       this.owners.set(doclet.uid, doclet);
       const kind = pageKindOf(doclet);
@@ -164,6 +179,7 @@ export class LinkRegistry {
         (doclet.memberofUid ? byUid.get(doclet.memberofUid) : undefined) ??
         doclets.find((candidate) => candidate.longname === doclet.memberof);
       if (!owner) continue;
+      if (containerUids.has(owner.uid)) continue;
       const ownerTarget = this.targets.get(owner.longname);
       if (!ownerTarget) continue;
       const base = slug(doclet.name) || "member";

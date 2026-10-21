@@ -59,6 +59,7 @@ export interface ExportDocsSnapshotOptions {
  * @param {ExportDocsSnapshotOptions} options - Optional project and build metadata overrides.
  * @returns {Promise<DocsSnapshotV1>} A validated, JSON-safe snapshot of every docs table.
  * @throws {DocsSnapshotValidationError} When the assembled snapshot fails validation.
+ * @memberOf module:docaf
  */
 export async function exportDocsSnapshot(
   database: DocsDatabase,

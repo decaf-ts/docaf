@@ -1,0 +1,19 @@
+.docs-signature-block {
+  margin: 1rem 0 1.5rem;
+}
+.docs-signature-code {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--docs-border, #d7dbe0);
+  border-inline-start: 4px solid var(--docs-accent, #1f5fbf);
+  border-radius: 0.5rem;
+  background: var(--docs-surface, #f7f8fa);
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+.docs-signature-description {
+  margin: 0.6rem 0 0;
+  color: var(--docs-muted, #5f6b7a);
+}

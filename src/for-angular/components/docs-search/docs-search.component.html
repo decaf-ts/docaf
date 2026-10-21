@@ -1,0 +1,30 @@
+<div class="docs-search">
+  <span class="docs-search-icon" aria-hidden="true"></span>
+  <input
+    class="docs-search-input"
+    type="search"
+    placeholder="Search docs"
+    aria-label="Search documentation"
+    (input)="update($any($event.target).value)"
+  />
+  @if (term.trim().length) {
+    <ul class="docs-search-results" role="listbox" aria-label="Search results">
+      @for (entry of results; track entry.uid) {
+        <li class="docs-search-result">
+          @if (entry.route) {
+            <a [routerLink]="entry.route" [fragment]="entry.anchor">{{ entry.name }}</a>
+          } @else {
+            <span>{{ entry.name }}</span>
+          }
+          <span class="docs-search-kind">{{ entry.kind }}</span>
+          @if (entry.summary) {
+            <p class="docs-search-summary">{{ entry.summary }}</p>
+          }
+        </li>
+      }
+      @if (!results.length) {
+        <li class="docs-search-empty">No matches</li>
+      }
+    </ul>
+  }
+</div>

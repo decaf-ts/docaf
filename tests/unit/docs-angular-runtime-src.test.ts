@@ -5,6 +5,7 @@ jest.mock("@angular/core", () => {
   }
   return {
     Component: decorator,
+    Directive: decorator,
     Injectable: decorator,
     Inject: decorator,
     Input: decorator,
@@ -124,6 +125,36 @@ describe("DocsAngularRuntime initialization", () => {
     expect(fetchMock).toHaveBeenCalledWith("assets/docs/snapshot.json");
     expect(service).toBeInstanceOf(DocsPageService);
     expect(runtime.initialized).toBe(true);
+    expect(runtime.pageService).toBe(service);
+  });
+
+  it("bootstraps from an option snapshot without fetching", async () => {
+    const fetchMock = jest.fn(async () => {
+      throw new Error("fetch must not be called for a supplied snapshot");
+    });
+    (globalThis as unknown as { fetch: unknown }).fetch = fetchMock;
+    const snapshot = cloneFixture();
+    const runtime = new DocsAngularRuntime({});
+
+    const service = await runtime.initialize({ snapshot });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(service).toBeInstanceOf(DocsPageService);
+    expect(runtime.initialized).toBe(true);
+    expect(runtime.pageService).toBe(service);
+  });
+
+  it("bootstraps from a snapshot supplied to the constructor", async () => {
+    const fetchMock = jest.fn(async () => {
+      throw new Error("fetch must not be called for a supplied snapshot");
+    });
+    (globalThis as unknown as { fetch: unknown }).fetch = fetchMock;
+    const runtime = new DocsAngularRuntime({}, cloneFixture());
+
+    const service = await runtime.initialize();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(service).toBeInstanceOf(DocsPageService);
     expect(runtime.pageService).toBe(service);
   });
 

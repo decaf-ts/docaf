@@ -6,6 +6,7 @@
  * returned as-is. Non-plain values (e.g. Dates, Maps) pass through untouched.
  * @param {unknown} value - Value to canonicalize.
  * @returns {unknown} A structurally equal copy with object keys sorted at every level.
+ * @memberOf module:docaf
  */
 export function canonicalize(value: unknown): unknown {
   if (value === null || typeof value !== "object") return value;
@@ -24,6 +25,7 @@ export function canonicalize(value: unknown): unknown {
  * which is what makes stable hashing of snapshot data possible.
  * @param {unknown} value - Value to serialize.
  * @returns {string} The canonical JSON string.
+ * @memberOf module:docaf
  */
 export function stableStringify(value: unknown): string {
   return JSON.stringify(canonicalize(value));
@@ -36,6 +38,7 @@ export function stableStringify(value: unknown): string {
  * zero-padded 16-character lowercase hex. Same input always yields the same digest.
  * @param {string} value - String to hash.
  * @returns {string} The 64-bit digest as 16-char zero-padded lowercase hexadecimal.
+ * @memberOf module:docaf
  */
 export function stableHash(value: string): string {
   let hash = 0xcbf29ce484222325n;

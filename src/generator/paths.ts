@@ -14,6 +14,7 @@ function asDirectory(value: string): string {
  * share no common ancestor.
  * @param {string[]} paths - The file or directory paths to intersect.
  * @returns {string} The common ancestor directory as an absolute path.
+ * @memberOf module:docaf
  */
 export function commonDirectory(paths: readonly string[]): string {
   if (!paths.length) return process.cwd();

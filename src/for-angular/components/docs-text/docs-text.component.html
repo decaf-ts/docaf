@@ -1,0 +1,13 @@
+@if (blocks.length) {
+  <docs-children [blocks]="blocks" />
+} @else if (levelNumber === 1) {
+  <h1 class="docs-heading docs-heading-1">{{ textValue }}</h1>
+} @else if (levelNumber === 2) {
+  <h2 class="docs-heading docs-heading-2">{{ textValue }}</h2>
+} @else if (levelNumber === 3) {
+  <h3 class="docs-heading docs-heading-3">{{ textValue }}</h3>
+} @else if (levelNumber === 4) {
+  <h4 class="docs-heading docs-heading-4">{{ textValue }}</h4>
+} @else {
+  <span class="docs-text">{{ textValue }}</span>
+}

@@ -14,16 +14,17 @@ import type {
 } from "../../types";
 
 /**
- * BetterDocs' synthetic comment helpers, ported from
+ * @description Appends one or more lines to a JSDoc comment block.
+ * @summary BetterDocs' synthetic comment helper, ported from
  * `typescript/type-converter.js` at commit
- * 248ea8f0ed0eaff9eaf568554566f80454ab8cf5.
- *
- * The generated comment text is retained for:
- *  - `BetterDocsCompatibilityWriter` and the parity fixtures;
- *  - the individual helper parity tests required by TDS §5.2.
- *
- * The production path never re-parses the generated comment; the same
- * conversion result feeds `DecafModelWriter` directly.
+ * 248ea8f0ed0eaff9eaf568554566f80454ab8cf5. The generated comment text is retained for
+ * `BetterDocsCompatibilityWriter` and the parity fixtures, and for the individual helper
+ * parity tests required by TDS §5.2. The production path never re-parses the generated
+ * comment; the same conversion result feeds `DecafModelWriter` directly.
+ * @function appendComment
+ * @param {string} commentBlock - The comment block to extend.
+ * @param {string} toAppend - The text to append before the comment terminator.
+ * @returns {string} The comment block with the appended lines.
  */
 export const appendComment = (
   commentBlock: string,
@@ -39,6 +40,10 @@ export const appendComment = (
 
 function getJsDoc(node: ts.Node): ts.NodeArray<ts.JSDoc> | undefined {
   return (node as unknown as { jsDoc?: ts.NodeArray<ts.JSDoc> }).jsDoc;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function isSimpleInlineableExpression(node: ts.Node): boolean {
@@ -142,6 +147,35 @@ export const getCommentAsString = (member: ts.Node, src: string): string => {
         .join("");
     }
     return String(comment);
+  }
+  return "";
+};
+
+/**
+ * @description Resolves the rendered description of a documented declaration or member.
+ * @summary This is the single place where decaf tag-style comments are lifted into a
+ * description: pre-tag prose wins when present, otherwise the value of the `@description`
+ * tag is used, falling back to `@summary`. Tag-first comments leave
+ * `ts.JSDoc.comment` empty, which is why the compiler's comment text alone is not enough.
+ * @param {ts.Node} node - The node carrying the JSDoc comment.
+ * @param {string} src - The full source text used to flatten comment parts.
+ * @returns {string} The resolved description, or an empty string when none exists.
+ * @function getDescriptionAsString
+ */
+export const getDescriptionAsString = (
+  node: ts.Node,
+  src: string
+): string => {
+  const prose = getCommentAsString(node, src).trim();
+  if (prose) return prose;
+  const tags = ts.getJSDocTags(node);
+  for (const title of ["description", "summary"]) {
+    const tag = tags.find(
+      (candidate) => candidate.tagName.text.toLowerCase() === title
+    );
+    if (!tag) continue;
+    const value = tagComment(tag).trim();
+    if (value) return value;
   }
   return "";
 };
@@ -324,6 +358,7 @@ function tagComment(tag: ts.JSDocTag): string {
  * @param {ts.Node} node - The node whose JSDoc tags are converted.
  * @param {string} [source] - Unused source text kept for API compatibility.
  * @returns {ConvertedTag[]} One converted tag per JSDoc tag, in document order.
+ * @memberOf module:docaf
  */
 export function parseJsDocTags(
   node: ts.Node,
@@ -359,7 +394,7 @@ export function parseJsDocTags(
     }
     const raw = tag.getText();
     const fallback = raw
-      .replace(new RegExp(`^@${title}\\s*`), "")
+      .replace(new RegExp(`^@${escapeRegExp(title)}\\s*`), "")
       .replace(/\*\/\s*$/, "")
       .trim();
     const comment = tagComment(tag);
@@ -499,7 +534,7 @@ function collectProperties(
           ? "object"
           : thisTypeText(element.type, source, context, native),
         optional: Boolean(element.questionToken),
-        description: getCommentAsString(member, source),
+        description: getDescriptionAsString(member, source),
       });
       result.push(
         ...collectProperties(
@@ -567,9 +602,10 @@ export interface TypeConverterOptions {
 }
 
 /**
- * Ported BetterDocs TypeScript converter. One instance is shared by every
- * source file of a build, and feeds one emitter (`DecafModelWriter` in
- * production, plus `BetterDocsCompatibilityWriter` in parity runs).
+ * @description Ported BetterDocs TypeScript converter.
+ * @summary One instance is shared by every source file of a build, and feeds one emitter
+ * (`DecafModelWriter` in production, plus `BetterDocsCompatibilityWriter` in parity runs).
+ * @class TypeConverter
  */
 export class TypeConverter {
   private readonly packageName: string;
@@ -636,7 +672,7 @@ export class TypeConverter {
         rest: Boolean(parameter.dotDotDotToken),
         defaultValue: parameterDefaults(parameter),
         description:
-          getCommentAsString(parameter, context.source) ||
+          getDescriptionAsString(parameter, context.source) ||
           tag?.comment ||
           "",
       };
@@ -684,7 +720,7 @@ export class TypeConverter {
         value: `{${this.typeText(parameter.type, context, parameter)}} ${name}`,
         originalValue: name,
         kind: "param",
-        comment: getCommentAsString(parameter, context.source),
+        comment: getDescriptionAsString(parameter, context.source),
       });
     }
     if (mode.returnType && !hasTag(result, "return") && !hasTag(result, "returns"))
@@ -732,7 +768,7 @@ export class TypeConverter {
       return undefined;
     }
     const modifiers = modifierTexts(statement);
-    const description = getCommentAsString(statement, context.source).trim();
+    const description = getDescriptionAsString(statement, context.source).trim();
     const tags = parseJsDocTags(statement, context.source);
     const signature: ts.SignatureDeclarationBase | undefined =
       ts.isFunctionDeclaration(statement)
@@ -815,6 +851,54 @@ export class TypeConverter {
       statement,
       context
     );
+    return declaration;
+  }
+
+  /**
+   * Converts a barrel/export statement carrying a `@module` or `@namespace`
+   * JSDoc tag into a container declaration. The tag value supplies the
+   * container name; an accompanying `@memberOf` value qualifies the longname
+   * under its owner (JSDoc `module:`-style), matching the `@memberOf`
+   * references written on the symbols exported through the barrel.
+   */
+  private containerFromStatement(
+    statement: ts.Statement,
+    context: DocsSourceContext,
+    order: number
+  ): ConvertedDeclaration | undefined {
+    const tags = parseJsDocTags(statement, context.source);
+    const moduleTag = tags.find((tag) => tag.title === "module");
+    const namespaceTag = tags.find((tag) => tag.title === "namespace");
+    const containerTag = moduleTag ?? namespaceTag;
+    const name = containerTag?.value?.trim().split(/\s+/)[0];
+    if (!name) return undefined;
+    const memberof = tags
+      .find((tag) => tag.title === "memberOf")
+      ?.value?.trim();
+    const description = getDescriptionAsString(statement, context.source).trim();
+    const declaration: ConvertedDeclaration = {
+      name,
+      longname: memberof
+        ? `${memberof}.${name}`
+        : moduleTag
+          ? `module:${name}`
+          : `${this.packageName}.${name}`,
+      kind: moduleTag ? "module" : "namespace",
+      description,
+      classdesc: description,
+      order,
+      exportName: name,
+      tags: this.synthesizedTags(statement, context, {}),
+      examples: collectExamples(tags),
+      parameters: [],
+      properties: [],
+      augments: [],
+      implementsList: [],
+      location: locationOf(statement, context),
+      syntheticComment: "",
+      modifiers: [],
+      decorators: [],
+    };
     return declaration;
   }
 
@@ -1039,7 +1123,7 @@ export class TypeConverter {
       name,
       longname: `${declaration.longname}.${name}`,
       kind,
-      description: getCommentAsString(member, context.source).trim(),
+      description: getDescriptionAsString(member, context.source).trim(),
       access: accessOf(modifiers),
       readonly: modifiers.includes("readonly"),
       abstract: modifiers.includes("abstract"),
@@ -1204,6 +1288,15 @@ export class TypeConverter {
         this.declarationByLongname.set(declaration.longname, statement);
         doclets.push(this.emitter.emitDeclaration(declaration, context));
         order += 1;
+        continue;
+      }
+      if (ts.isExportDeclaration(statement)) {
+        const container = this.containerFromStatement(statement, context, order);
+        if (!container) continue;
+        this.lastDeclaration = container;
+        this.declarationByLongname.set(container.longname, statement);
+        doclets.push(this.emitter.emitDeclaration(container, context));
+        order += 1;
       }
     }
     return doclets;
@@ -1216,6 +1309,7 @@ export class TypeConverter {
  * component of source records from a full file path.
  * @param {string} filename - The file path to reduce.
  * @returns {string} The last path segment of the given filename.
+ * @memberOf module:docaf
  */
 export function baseName(filename: string): string {
   return path.basename(filename);

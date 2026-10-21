@@ -1,0 +1,30 @@
+@if (sections.length) {
+  <div class="docs-sections">
+    @for (section of sections; track section.uid) {
+      <section class="docs-section docs-section-{{ section.kind }}" [attr.id]="'section-' + section.key">
+        @if (section.kind === "source") {
+          <docs-source [value]="sourceValue(section)"></docs-source>
+        } @else {
+          @if (section.title) {
+            <h2 class="docs-section-title">{{ section.title }}</h2>
+          }
+          @if (section.kind === "signature") {
+            <docs-signature [section]="section"></docs-signature>
+          } @else {
+            @if (section.content) {
+              <div class="docs-prose" [innerHTML]="sectionHtml(section)"></div>
+            }
+            @if (section.members?.length) {
+              <docs-members [items]="section.members"></docs-members>
+            }
+            @if (section.examples?.length) {
+              <docs-examples [items]="section.examples"></docs-examples>
+            }
+          }
+        }
+      </section>
+    }
+  </div>
+} @else {
+  <docs-children [blocks]="blocks" />
+}

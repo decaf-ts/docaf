@@ -53,14 +53,6 @@ cat > "${PROJECT_DIR}/package.json" <<'JSON'
 }
 JSON
 
-cat > "${PROJECT_DIR}/decafdocs.config.mjs" <<'JSON'
-export default {
-  project: { name: "docaf-docker-smoke", version: "1.0.0" },
-  source: { tsconfig: "./tsconfig.json", include: ["src/**/*.ts"] },
-  targets: [{ renderer: "angular", output: "/output/docs" }],
-};
-JSON
-
 RUN_ARGS=("--user" "$(id -u):$(id -g)" "-e" "HOME=/tmp")
 if [ -n "${DOCAF_DOCKER_RUN_ARGS:-}" ]; then
   read -r -a RUN_ARGS <<< "${DOCAF_DOCKER_RUN_ARGS}"
@@ -117,7 +109,9 @@ docker run --rm \
   "${RUN_ARGS[@]}" \
   "${MOUNT_ARGS[@]}" \
   "${IMAGE}" \
-  build --config /workspace/decafdocs.config.mjs
+  build --tsconfig /workspace/tsconfig.json --include "src/**/*.ts" \
+  --project-name docaf-docker-smoke --project-version 1.0.0 \
+  --output /output/docs --base-href ./
 
 if [ "${MOUNT_MODE}" = "volume" ]; then
   docker run --rm --user root --entrypoint tar \

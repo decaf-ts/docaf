@@ -1,5 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import { Logging } from "@decaf-ts/logging";
+
+const log = Logging.for("docaf workspace target");
 
 export type WorkspaceModule = typeof import("../src");
 
@@ -34,7 +37,7 @@ export function getWorkspaceTarget(): WorkspaceTarget {
   const rawTarget = process.env[WorkspaceTargetEnvKey];
   if (!rawTarget) return DEFAULT_TARGET;
 
-  console.log(`Using workspace target "${rawTarget}"`);
+  log.info(`Using workspace target "${rawTarget}"`);
   if (rawTarget === "src" || rawTarget === "lib" || rawTarget === "dist")
     return rawTarget;
 

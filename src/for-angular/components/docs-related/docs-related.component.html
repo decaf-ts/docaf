@@ -1,0 +1,16 @@
+@if (related.length) {
+  <section class="docs-related">
+    <h2 class="docs-related-title">Related</h2>
+    <ul class="docs-related-list">
+      @for (item of related; track item.uid) {
+        <li>
+          @if (item.route) {
+            <a [routerLink]="item.route" [fragment]="item.anchor">{{ item.label }}</a>
+          } @else {
+            <span>{{ item.label }}</span>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+}

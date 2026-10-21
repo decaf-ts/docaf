@@ -31,6 +31,7 @@ export interface SignatureAttributes {
  * @param {DocletModel} doclet - The doclet to test.
  * @returns {boolean} True when a DocSignatureModel should be built for the
  * doclet.
+ * @memberOf module:docaf
  */
 export function needsSignature(doclet: DocletModel): boolean {
   if (doclet.kind === "function" || doclet.kind === "class") return true;
@@ -43,7 +44,15 @@ export function needsSignature(doclet: DocletModel): boolean {
   return false;
 }
 
-/** Port of BetterDocs' `getSignatureAttributes()`. */
+/**
+ * @description Collects the BetterDocs signature attribute flags of an item.
+ * @summary Maps the optional/nullable flags of a {@link SignatureAttributes}
+ * record to the attribute tokens used by signature rendering: `opt` for
+ * optional parameters, `nullable`/`non-null` for tri-state nullability.
+ * @param {SignatureAttributes} item - The attribute record to read.
+ * @returns {string[]} The attribute tokens in canonical order.
+ * @memberOf module:docaf
+ */
 export function getSignatureAttributes(
   item: SignatureAttributes
 ): string[] {
@@ -129,6 +138,7 @@ function parameterText(parameter: DocParameterModel): string {
  * "async", "abstract"; defaults to none.
  * @returns {{signatureText: string, parametersText: string}} The composed full
  * signature text and the bare parameter list text.
+ * @memberOf module:docaf
  */
 export function composeSignature(
   name: string,

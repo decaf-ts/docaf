@@ -10,6 +10,8 @@ import {
   writeFile,
 } from "../support/harness";
 
+jest.setTimeout(60000);
+
 const TSCONFIG = JSON.stringify(
   {
     compilerOptions: {

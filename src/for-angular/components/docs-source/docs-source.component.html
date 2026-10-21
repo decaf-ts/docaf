@@ -1,0 +1,12 @@
+<section class="docs-source">
+  <h2 class="docs-source-title">Source</h2>
+  <p class="docs-source-file"><code>{{ displayPath }}</code></p>
+  @if (source.repository) {
+    <p class="docs-source-repository">
+      <a [attr.href]="source.repository" rel="noopener noreferrer">View repository</a>
+    </p>
+  }
+  @if (source.code) {
+    <docs-code [code]="source.code" [language]="'ts'"></docs-code>
+  }
+</section>

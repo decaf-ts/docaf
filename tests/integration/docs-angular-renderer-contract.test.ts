@@ -7,15 +7,41 @@ import {
   AngularDocsRendererAdapter,
 } from "../../src/for-angular/rendering/AngularDocsRendererAdapter";
 import {
+  DOCS_ANGULAR_PRIMITIVES,
+  DocsBodyLayoutComponent,
   DocsBrandComponent,
+  DocsBreadcrumbsComponent,
+  DocsClassPageComponent,
+  DocsCodeComponent,
   DocsComponentMetadataComponent,
+  DocsComponentPageComponent,
+  DocsExamplesComponent,
+  DocsFooterComponent,
+  DocsGenericPageComponent,
+  DocsHeaderComponent,
+  DocsHomePageComponent,
   DocsLinkComponent,
   DocsListComponent,
+  DocsMembersComponent,
+  DocsNavChildrenComponent,
+  DocsNavigationItemsComponent,
+  DocsNavTreeComponent,
+  DocsParametersComponent,
   DocsPreviewComponent,
+  DocsRelatedComponent,
+  DocsReturnsComponent,
   DocsSearchComponent,
+  DocsSectionsComponent,
+  DocsSidebarComponent,
+  DocsSignatureComponent,
+  DocsSiteLayoutComponent,
   DocsSourceComponent,
+  DocsSourcePageComponent,
+  DocsSymbolComponent,
   DocsTextComponent,
+  DocsTocComponent,
   DocsTutorialComponent,
+  DocsTutorialPageComponent,
 } from "../../src/for-angular/rendering/DocsAngularComponents";
 import {
   DOCS_BASE_CAPABILITIES,
@@ -48,6 +74,7 @@ jest.mock("@angular/core", () => {
   }
   return {
     Component: decorator,
+    Directive: decorator,
     Injectable: decorator,
     Inject: decorator,
     Input: decorator,
@@ -99,6 +126,62 @@ const PROJECT = { name: "@fixture/adapter", version: "1.0.0" };
 const CLASS_ROUTE = "/docs/classes/RamAdapter";
 const COMPONENT_ROUTE = "/docs/components/DocWidgetComponent";
 const TUTORIAL_ROUTE = "/docs/tutorials/guide";
+
+const ELEMENT_COMPONENTS: readonly (readonly [string, unknown])[] = [
+  [DocsElements.SITE_LAYOUT, DocsSiteLayoutComponent],
+  [DocsElements.BODY_LAYOUT, DocsBodyLayoutComponent],
+  [DocsElements.PAGE_LAYOUT, DocsGenericPageComponent],
+  [DocsElements.CONTENT_LAYOUT, DocsGenericPageComponent],
+  [DocsElements.CLASS_LAYOUT, DocsClassPageComponent],
+  [DocsElements.COMPONENT_LAYOUT, DocsComponentPageComponent],
+  [DocsElements.TUTORIAL_LAYOUT, DocsTutorialPageComponent],
+  [DocsElements.SOURCE_LAYOUT, DocsSourcePageComponent],
+  [DocsElements.HOME_LAYOUT, DocsHomePageComponent],
+  [DocsElements.HEADER, DocsHeaderComponent],
+  [DocsElements.FOOTER, DocsFooterComponent],
+  [DocsElements.SIDEBAR, DocsSidebarComponent],
+  [DocsElements.BREADCRUMBS, DocsBreadcrumbsComponent],
+  [DocsElements.SYMBOL, DocsSymbolComponent],
+  [DocsElements.SIGNATURE, DocsSignatureComponent],
+  [DocsElements.METHOD, DocsMembersComponent],
+  [DocsElements.PARAMETERS, DocsParametersComponent],
+  [DocsElements.RETURNS, DocsReturnsComponent],
+  [DocsElements.MEMBERS, DocsMembersComponent],
+  [DocsElements.EXAMPLES, DocsExamplesComponent],
+  [DocsElements.CODE, DocsCodeComponent],
+  [DocsElements.COMPONENT, DocsComponentMetadataComponent],
+  [DocsElements.PREVIEW, DocsPreviewComponent],
+  [DocsElements.SEARCH, DocsSearchComponent],
+  [DocsElements.SOURCE, DocsSourceComponent],
+  [DocsElements.TUTORIAL, DocsTutorialComponent],
+  [DocsElements.SECTIONS, DocsSectionsComponent],
+  [DocsElements.RELATED, DocsRelatedComponent],
+  [DocsElements.TOC, DocsTocComponent],
+  [DocsElements.NAVIGATION, DocsNavigationItemsComponent],
+  [DocsElements.TEXT, DocsTextComponent],
+  [DocsElements.HEADING, DocsTextComponent],
+  [DocsElements.LINK, DocsLinkComponent],
+  [DocsElements.BRAND, DocsBrandComponent],
+  [DocsElements.MARKDOWN, DocsTutorialComponent],
+  [DocsElements.SIGNATURE_NAME, DocsTextComponent],
+  [DocsElements.SIGNATURE_PARAMETERS, DocsTextComponent],
+  [DocsElements.SIGNATURE_RETURNS, DocsTextComponent],
+  [DocsElements.SYMBOL_NAME, DocsTextComponent],
+  [DocsElements.SYMBOL_KIND, DocsTextComponent],
+  [DocsElements.SYMBOL_DESCRIPTION, DocsTextComponent],
+  [DocsElements.NAVIGATION_ITEMS, DocsNavigationItemsComponent],
+  [DocsElements.BREADCRUMB_ITEMS, DocsBreadcrumbsComponent],
+  [DocsElements.TOC_ITEMS, DocsTocComponent],
+  [DocsElements.SECTION_LIST, DocsSectionsComponent],
+  [DocsElements.MEMBER_LIST, DocsMembersComponent],
+  [DocsElements.EXAMPLE_LIST, DocsExamplesComponent],
+  [DocsElements.RELATED_LIST, DocsRelatedComponent],
+  [DocsElements.SOURCE_VIEW, DocsSourceComponent],
+  [DocsElements.COMPONENT_VIEW, DocsComponentMetadataComponent],
+  [DocsElements.PREVIEW_VIEW, DocsPreviewComponent],
+  [DocsElements.SEARCH_ENTRIES, DocsSearchComponent],
+  [DocsElements.TUTORIAL_CONTENT, DocsTutorialComponent],
+];
 
 const CONTRACT_METHODS: readonly (keyof DocsRendererContract)[] = [
   "rendersSiteLayout",
@@ -214,48 +297,44 @@ describe("Angular docs renderer contract", () => {
     expect(adapter.capabilities.has("component.native-preview")).toBe(true);
   });
 
-  it("registers every required semantic element and layout tag", () => {
+  it("registers every required semantic element", () => {
     for (const element of DOCS_REQUIRED_ELEMENTS)
       expect(engineRegistry().has(element)).toBe(true);
+  });
 
-    const layoutTags = [
-      DocsElements.SITE_LAYOUT,
-      DocsElements.PAGE_LAYOUT,
-      DocsElements.CLASS_LAYOUT,
-      DocsElements.COMPONENT_LAYOUT,
-      DocsElements.TUTORIAL_LAYOUT,
-      DocsElements.SOURCE_LAYOUT,
-      DocsElements.HOME_LAYOUT,
-      DocsElements.BODY_LAYOUT,
-      DocsElements.CONTENT_LAYOUT,
-    ];
-    for (const tag of layoutTags) expect(engineRegistry().has(tag)).toBe(true);
+  it.each(ELEMENT_COMPONENTS)(
+    "maps %s to its dedicated component",
+    (tag, component) => {
+      expect(engineRegistry().get(tag)).toBe(component);
+    }
+  );
 
-    expect(engineRegistry().get(DocsElements.BRAND)).toBe(DocsBrandComponent);
-    expect(engineRegistry().get(DocsElements.LINK)).toBe(DocsLinkComponent);
-    expect(engineRegistry().get(DocsElements.SEARCH_ENTRIES)).toBe(
-      DocsSearchComponent
+  it("registers the complete page-block map with no stale slots", () => {
+    expect(engineRegistry().size).toBe(ELEMENT_COMPONENTS.length);
+    expect([...engineRegistry().keys()].sort()).toEqual(
+      ELEMENT_COMPONENTS.map(([tag]) => tag).sort()
     );
-    expect(engineRegistry().get(DocsElements.SOURCE_VIEW)).toBe(
-      DocsSourceComponent
-    );
-    expect(engineRegistry().get(DocsElements.TUTORIAL_CONTENT)).toBe(
-      DocsTutorialComponent
-    );
-    expect(engineRegistry().get(DocsElements.COMPONENT_VIEW)).toBe(
-      DocsComponentMetadataComponent
-    );
-    expect(engineRegistry().get(DocsElements.PREVIEW_VIEW)).toBe(
-      DocsPreviewComponent
-    );
-    expect(engineRegistry().get(DocsElements.MEMBERS)).toBeInstanceOf(
-      Function
-    );
-    expect(engineRegistry().get(DocsElements.SYMBOL)).toBeInstanceOf(Function);
+  });
+
+  it("keeps the legacy list and nav aliases on the dedicated components", () => {
+    expect(DocsListComponent).toBe(DocsSectionsComponent);
+    expect(DocsNavChildrenComponent).toBe(DocsNavTreeComponent);
     expect(engineRegistry().get(DocsElements.NAVIGATION_ITEMS)).toBe(
-      DocsListComponent
+      DocsNavigationItemsComponent
     );
-    expect(engineRegistry().get(DocsElements.HEADING)).toBe(DocsTextComponent);
+    expect(engineRegistry().get(DocsElements.SECTIONS)).toBe(
+      DocsSectionsComponent
+    );
+  });
+
+  it("exposes every dedicated component through DOCS_ANGULAR_PRIMITIVES", () => {
+    const primitives = new Set<unknown>(DOCS_ANGULAR_PRIMITIVES);
+    for (const [tag, component] of ELEMENT_COMPONENTS) {
+      expect(primitives.has(component)).toBe(true);
+      expect(engineRegistry().get(tag)).toBe(component);
+    }
+    expect(primitives.has(DocsListComponent)).toBe(true);
+    expect(primitives.has(DocsNavChildrenComponent)).toBe(true);
   });
 
   it("rendersSiteLayout: resolves the site chrome and the 3-column body", async () => {

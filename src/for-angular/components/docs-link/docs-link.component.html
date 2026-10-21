@@ -1,0 +1,7 @@
+@if (target.route) {
+  <a class="docs-link" [routerLink]="target.route" [fragment]="target.anchor">{{ target.label }}</a>
+} @else if (target.href) {
+  <a class="docs-link" [attr.href]="target.href" rel="noopener noreferrer">{{ target.label }}</a>
+} @else {
+  <span class="docs-link">{{ target.label }}</span>
+}

@@ -1,0 +1,13 @@
+.docs-page {
+  display: block;
+  min-width: 0;
+}
+.docs-page-breadcrumbs {
+  margin-bottom: 0.5rem;
+}
+.docs-page-symbol {
+  margin-bottom: 1.5rem;
+}
+.docs-page-section {
+  margin: 1.5rem 0;
+}

@@ -1,0 +1,21 @@
+.docs-site-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.docs-site-main {
+  flex: 1;
+  width: 100%;
+}
+.docs-skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  padding: 0.5rem 0.75rem;
+  background: #fff;
+  z-index: 100;
+}
+.docs-skip-link:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+}

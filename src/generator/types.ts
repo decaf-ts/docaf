@@ -8,10 +8,10 @@ import type {
 import type { DocsDiagnostics } from "./diagnostics";
 
 /**
- * Context handed to every plugin for a single parsed source file.
- *
- * The same `ts.Program` and `ts.TypeChecker` instance is shared by every
+ * @description Context handed to every plugin for a single parsed source file.
+ * @summary The same `ts.Program` and `ts.TypeChecker` instance is shared by every
  * source file of a build; plugins must never create their own program.
+ * @interface DocsSourceContext
  */
 export interface DocsSourceContext {
   filename: string;
@@ -25,7 +25,11 @@ export interface DocsSourceContext {
 }
 
 /**
- * Project wide context handed to `afterParse` hooks.
+ * @description Project wide context handed to `afterParse` hooks.
+ * @summary Exposes the doclets produced by the run, the declarations map
+ * shared across the pipeline, the build diagnostics sink, and the root file
+ * names of the program.
+ * @interface DocsPluginContext
  */
 export interface DocsPluginContext {
   doclets: DocletModel[];
@@ -35,7 +39,11 @@ export interface DocsPluginContext {
 }
 
 /**
- * Lifecycle contract preserved from BetterDocs/JSDoc.
+ * @description Lifecycle contract preserved from BetterDocs/JSDoc.
+ * @summary A docs plugin optionally hooks `beforeParse` (per source file),
+ * `newDoclet` (per emitted doclet), and `afterParse` (once per run with the
+ * full doclet list). All hooks may be async.
+ * @interface DecafDocsPlugin
  */
 export interface DecafDocsPlugin {
   readonly name: string;
@@ -106,8 +114,12 @@ export interface ComponentExtraction {
 }
 
 /**
- * Extractor contract. A future React extractor only needs to implement this
- * interface and be registered; the publisher never changes.
+ * @description Extractor contract for component frameworks.
+ * @summary A future React extractor only needs to implement this
+ * interface and be registered; the publisher never changes. `supports`
+ * decides whether an extractor handles a declaration, `extract` produces the
+ * structured {@link ComponentExtraction}.
+ * @interface ComponentExtractor
  */
 export interface ComponentExtractor {
   readonly framework: string;
@@ -196,6 +208,7 @@ export interface ConvertedProperty {
  * @summary Enumerates the `kind` values the type converter assigns to
  * declarations: `class`, `interface`, `function`, `typedef`, `enum` and
  * `module`.
+ * @memberOf module:docaf
  */
 export type ConvertedDeclarationKind =
   | "class"
@@ -203,13 +216,15 @@ export type ConvertedDeclarationKind =
   | "function"
   | "typedef"
   | "enum"
-  | "module";
+  | "module"
+  | "namespace";
 
 /**
  * @description The doclet kinds a class/interface/enum member can convert to.
  * @summary Enumerates the `kind` values the type converter assigns to members:
  * `function` (methods), `member` (fields and enum members), `constructor` and
  * `accessor`.
+ * @memberOf module:docaf
  */
 export type ConvertedMemberKind =
   | "function"

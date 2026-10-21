@@ -1,0 +1,17 @@
+<article class="docs-page docs-generic-page">
+  @if (pageKind === "home") {
+    <docs-home-page [children]="children"></docs-home-page>
+  } @else if (previewBlock) {
+    <docs-component-page [children]="children"></docs-component-page>
+  } @else if (tutorialBlock) {
+    <docs-tutorial-page [children]="children"></docs-tutorial-page>
+  } @else if (sourceBlock) {
+    <docs-source-page [children]="children"></docs-source-page>
+  } @else if (breadcrumbsBlock) {
+    <docs-class-page [children]="children"></docs-class-page>
+  } @else {
+    @for (block of contentBlocks; track $index) {
+      <ngx-decaf-component-renderer [tag]="block.tag" [globals]="block"></ngx-decaf-component-renderer>
+    }
+  }
+</article>

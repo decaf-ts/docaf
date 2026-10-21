@@ -50,9 +50,10 @@ function pageLayout(kind: string): string {
 }
 
 /**
- * Publication of logical pages and ordered semantic sections. The publisher
- * chooses which sections exist and their order; layouts place them and the
- * selected renderer draws them. This class emits models only, never HTML.
+ * @description Publication of logical pages and ordered semantic sections.
+ * @summary The publisher chooses which sections exist and their order; layouts place them and
+ * the selected renderer draws them. This class emits models only, never HTML.
+ * @class PageBuilder
  */
 export class PageBuilder {
   private readonly basePath: string;
@@ -80,9 +81,21 @@ export class PageBuilder {
       list.push(doclet);
       byOwner.set(doclet.memberofUid, list);
     }
+    const containerUids = new Set(
+      dataset.doclets
+        .filter(
+          (doclet) => doclet.kind === "module" || doclet.kind === "namespace"
+        )
+        .map((doclet) => doclet.uid)
+    );
 
     for (const doclet of dataset.doclets) {
-      if (doclet.memberofUid || doclet.memberof) continue;
+      if (doclet.memberofUid || doclet.memberof) {
+        const ownerIsContainer =
+          doclet.memberofUid !== undefined &&
+          containerUids.has(doclet.memberofUid);
+        if (!ownerIsContainer) continue;
+      }
       const target = links.resolve(doclet.longname);
       if (!target) continue;
       const kind = doclet.componentId ? "component" : doclet.kind;

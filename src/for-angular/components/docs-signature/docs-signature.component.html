@@ -1,0 +1,17 @@
+<section class="docs-signature-block" [attr.id]="member?.anchor">
+  @if (signatureText) {
+    <pre class="docs-signature-code"><code>{{ signatureText }}</code></pre>
+  }
+  @if (description) {
+    <p class="docs-signature-description">{{ description }}</p>
+  }
+  @if (parameters.length) {
+    <docs-parameters [items]="parameters"></docs-parameters>
+  }
+  @if (returns.length) {
+    <docs-returns [items]="returns"></docs-returns>
+  }
+  @if (!signatureText && blocks.length) {
+    <docs-children [blocks]="blocks" />
+  }
+</section>

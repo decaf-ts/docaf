@@ -40,12 +40,16 @@ function resolveFrom(start: string): string | undefined {
 }
 
 /**
- * Locates the installed `@decaf-ts/docaf` package root at runtime.
- *
- * The helper deliberately avoids `import.meta` so the same source compiles to
+ * @description Locates the installed `@decaf-ts/docaf` package root at runtime.
+ * @summary The helper deliberately avoids `import.meta` so the same source compiles to
  * both the ESM and CommonJS outputs. In CommonJS the module directory is
  * available directly; elsewhere the package is resolved from the current
  * project or from `DOCAF_PACKAGE_ROOT`.
+ * @function resolveDocafPackageRoot
+ * @param {string} [preferredStart] - Optional directory to start the upward search from.
+ * @returns {string} Absolute path of the installed `@decaf-ts/docaf` package root.
+ * @throws {DocsBuildError} When no package root can be located.
+ * @memberOf module:docaf
  */
 export function resolveDocafPackageRoot(preferredStart?: string): string {
   const configured = process.env.DOCAF_PACKAGE_ROOT;

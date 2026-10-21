@@ -1,0 +1,52 @@
+.docs-sections {
+  display: block;
+}
+.docs-section {
+  margin: 2rem 0;
+  scroll-margin-top: 5rem;
+}
+.docs-section-title {
+  margin: 0 0 0.85rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--docs-border, #d7dbe0);
+  font-size: 1.3rem;
+  letter-spacing: -0.01em;
+}
+.docs-prose {
+  color: #273444;
+}
+.docs-prose :first-child {
+  margin-top: 0;
+}
+.docs-prose h1,
+.docs-prose h2,
+.docs-prose h3 {
+  line-height: 1.25;
+}
+.docs-prose code {
+  background: var(--docs-surface, #f7f8fa);
+  border: 1px solid var(--docs-border, #d7dbe0);
+  border-radius: 0.3rem;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.88em;
+}
+.docs-prose pre {
+  overflow: auto;
+  padding: 0.85rem;
+  border-radius: 0.5rem;
+  background: var(--docs-surface, #f7f8fa);
+  border: 1px solid var(--docs-border, #d7dbe0);
+}
+.docs-source-reference {
+  color: var(--docs-muted, #5f6b7a);
+  font-size: 0.86rem;
+}
+:host ::ng-deep .docs-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+:host ::ng-deep pre {
+  max-width: 100%;
+  overflow-x: auto;
+}

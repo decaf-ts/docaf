@@ -1,0 +1,35 @@
+@if (parameters.length) {
+  <section class="docs-parameters">
+    <h3 class="docs-parameters-title">Parameters</h3>
+    <div class="docs-table-wrap">
+      <table class="docs-table docs-parameters-table">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Type</th>
+            <th scope="col">Default</th>
+            <th scope="col">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (parameter of parameters; track parameter.uid) {
+            <tr>
+              <td class="docs-parameter-name">
+                @if (parameter.rest) {
+                  <span aria-label="rest parameter">...</span>
+                }
+                <code>{{ parameter.name }}</code>
+                @if (parameter.optional) {
+                  <span class="docs-optional" title="optional">?</span>
+                }
+              </td>
+              <td><code>{{ parameter.typeText }}</code></td>
+              <td><code>{{ parameter.defaultValue }}</code></td>
+              <td>{{ parameter.description }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+}

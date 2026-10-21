@@ -1,7 +1,9 @@
 import { column, pk, table } from "@decaf-ts/core";
 import { prop } from "@decaf-ts/decoration";
-import { list, type ModelArg } from "@decaf-ts/decorator-validation";
-import { DocsModel, docsModel } from "./base";
+import { list, model, required, type ModelArg } from "@decaf-ts/decorator-validation";
+import { uielement, uimodel } from "@decaf-ts/ui-decorators";
+import { stableName } from "./naming";
+import { DocsModel } from "./base";
 
 /**
  * @description Decaf model for a single JSDoc doclet (a documented symbol such as a class, method,
@@ -13,198 +15,249 @@ import { DocsModel, docsModel } from "./base";
  * (`augments`, `implements`, `mixes`, ...). Stored in the `docs_doclets` table; serialized
  * portably as {@link DocletRecord}.
  * @class DocletModel
+ * @category Models
  */
 @table("docs_doclets")
-@docsModel("DocletModel")
+@model()
+@uimodel()
+@stableName("DocletModel")
 export class DocletModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   name!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   longname!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   kind!: string;
 
   @column()
+  @uielement("")
   @prop()
   package?: string;
 
   @column()
+  @uielement("")
   @prop()
   memberof?: string;
 
   @column()
+  @uielement("")
   @prop()
   memberofUid?: string;
 
   @column()
+  @uielement("")
   @prop()
   scope?: string;
 
   @column()
+  @uielement("")
   @prop()
   description?: string;
 
   @column()
+  @uielement("")
   @prop()
   classdesc?: string;
 
   @column()
+  @uielement("")
   @prop()
   summary?: string;
 
   @column()
+  @uielement("")
   @prop()
   access?: string;
 
   @column()
+  @uielement("")
   @prop()
   readonly?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   abstract?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   async?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   virtual?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   deprecated?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   since?: string;
 
   @column()
+  @uielement("")
   @prop()
   version?: string;
 
   @column()
+  @uielement("")
   @prop()
   type?: string;
 
   @column()
+  @uielement("")
   @prop()
   category?: string;
 
   @column()
+  @uielement("")
   @prop()
   subCategory?: string;
 
   @column()
+  @uielement("")
   @prop()
   anchor?: string;
 
   @column()
+  @uielement("")
   @prop()
   order?: number;
 
   @column()
+  @uielement("")
   @prop()
   componentId?: string;
 
   @column()
+  @uielement("")
   @prop()
   sourceId?: string;
 
   @column()
+  @uielement("")
   @prop()
   linkId?: string;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   signatureIds: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   typeIds: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   propertyIds: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   exampleIds: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   tagIds: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   referenceIds: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   tutorialIds: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   augments: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   implements: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   mixes: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   overrides: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   inherits: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   see: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   requires: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   fires: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   listens: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   metadata?: Record<string, string>;
 
@@ -219,34 +272,47 @@ export class DocletModel extends DocsModel {
  * `comment`, linked back to its owning record through `ownerUid`. Stored in the `docs_tags`
  * table; serialized portably as {@link DocTagRecord}.
  * @class DocTagModel
+ * @category Models
  */
 @table("docs_tags")
-@docsModel("DocTagModel")
+@model()
+@uimodel()
+@stableName("DocTagModel")
 export class DocTagModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   ownerUid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   name!: string;
 
   @column()
+  @uielement("")
   @prop()
   value?: string;
 
   @column()
+  @uielement("")
   @prop()
   originalValue?: string;
 
   @column()
+  @uielement("")
   @prop()
   kind?: string;
 
   @column()
+  @uielement("")
   @prop()
   comment?: string;
 
@@ -263,59 +329,79 @@ export class DocTagModel extends DocsModel {
  * nested type expression strings under `arguments`. Stored in the `docs_types` table; serialized
  * portably as {@link DocTypeRecord}.
  * @class DocTypeModel
+ * @category Models
  */
 @table("docs_types")
-@docsModel("DocTypeModel")
+@model()
+@uimodel()
+@stableName("DocTypeModel")
 export class DocTypeModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   ownerUid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   role!: string;
 
   @column()
+  @uielement("")
   @prop()
   index: number = 0;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   text!: string;
 
   @column()
+  @uielement("")
   @prop()
   normalized?: string;
 
   @column()
+  @uielement("")
   @prop()
   kind?: string;
 
   @column()
+  @uielement("")
   @prop()
   referenceLongname?: string;
 
   @column()
+  @uielement("")
   @prop()
   referenceUid?: string;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   arguments: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   nullable?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   optional?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   readonly?: boolean;
 
@@ -331,46 +417,62 @@ export class DocTypeModel extends DocsModel {
  * `optional`, `rest` plus the `defaultValue` and `description`. Stored in the `docs_parameters`
  * table; serialized portably as {@link DocParameterRecord}.
  * @class DocParameterModel
+ * @category Models
  */
 @table("docs_parameters")
-@docsModel("DocParameterModel")
+@model()
+@uimodel()
+@stableName("DocParameterModel")
 export class DocParameterModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   signatureUid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   name!: string;
 
   @column()
+  @uielement("")
   @prop()
   index: number = 0;
 
   @column()
+  @uielement("")
   @prop()
   typeText?: string;
 
   @column()
+  @uielement("")
   @prop()
   typeId?: string;
 
   @column()
+  @uielement("")
   @prop()
   optional: boolean = false;
 
   @column()
+  @uielement("")
   @prop()
   rest: boolean = false;
 
   @column()
+  @uielement("")
   @prop()
   defaultValue?: string;
 
   @column()
+  @uielement("")
   @prop()
   description?: string;
 
@@ -386,38 +488,51 @@ export class DocParameterModel extends DocsModel {
  * `elementTypeText` for array/collection element types, `nullable`, and the `description`.
  * Stored in the `docs_returns` table; serialized portably as {@link DocReturnRecord}.
  * @class DocReturnModel
+ * @category Models
  */
 @table("docs_returns")
-@docsModel("DocReturnModel")
+@model()
+@uimodel()
+@stableName("DocReturnModel")
 export class DocReturnModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   signatureUid!: string;
 
   @column()
+  @uielement("")
   @prop()
   role: "returns" | "yields" = "returns";
 
   @column()
+  @uielement("")
   @prop()
   typeText?: string;
 
   @column()
+  @uielement("")
   @prop()
   typeId?: string;
 
   @column()
+  @uielement("")
   @prop()
   description?: string;
 
   @column()
+  @uielement("")
   @prop()
   nullable?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   elementTypeText?: string;
 
@@ -435,84 +550,108 @@ export class DocReturnModel extends DocsModel {
  * disambiguated by `index`. Stored in the `docs_signatures` table; serialized portably as
  * {@link DocSignatureRecord}.
  * @class DocSignatureModel
+ * @category Models
  */
 @table("docs_signatures")
-@docsModel("DocSignatureModel")
+@model()
+@uimodel()
+@stableName("DocSignatureModel")
 export class DocSignatureModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   docletUid!: string;
 
   @column()
+  @uielement("")
   @prop()
   index: number = 0;
 
   @column()
+  @uielement("")
   @prop()
   kind: string = "function";
 
   @column()
+  @uielement("")
   @prop()
   name?: string;
 
   @column()
+  @uielement("")
   @prop()
   signatureText?: string;
 
   @column()
+  @uielement("")
   @prop()
   parametersText?: string;
 
   @column()
+  @uielement("")
   @prop()
   access?: string;
 
   @column()
+  @uielement("")
   @prop()
   description?: string;
 
   @column()
+  @uielement("")
   @prop()
   static?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   async?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   abstract?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   virtual?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   inheritedFrom?: string;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   parameterIds: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   returnId?: string;
 
   @column()
+  @uielement("")
   @prop()
   yieldId?: string;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   typeIds: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   referenceIds: string[] = [];
@@ -529,34 +668,47 @@ export class DocSignatureModel extends DocsModel {
  * ordered by `index`. Stored in the `docs_examples` table; serialized portably as
  * {@link DocExampleRecord}.
  * @class DocExampleModel
+ * @category Models
  */
 @table("docs_examples")
-@docsModel("DocExampleModel")
+@model()
+@uimodel()
+@stableName("DocExampleModel")
 export class DocExampleModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   ownerUid!: string;
 
   @column()
+  @uielement("")
   @prop()
   index: number = 0;
 
   @column()
+  @uielement("")
   @prop()
   caption?: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   code!: string;
 
   @column()
+  @uielement("")
   @prop()
   language?: string;
 
   @column()
+  @uielement("")
   @prop()
   escaped?: boolean;
 
@@ -572,42 +724,56 @@ export class DocExampleModel extends DocsModel {
  * provenance in generated documentation. Stored in the `docs_sources` table; serialized
  * portably as {@link DocSourceRecord}.
  * @class DocSourceModel
+ * @category Models
  */
 @table("docs_sources")
-@docsModel("DocSourceModel")
+@model()
+@uimodel()
+@stableName("DocSourceModel")
 export class DocSourceModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
   @prop()
   package?: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   fileName!: string;
 
   @column()
+  @uielement("")
   @prop()
   repository?: string;
 
   @column()
+  @uielement("")
   @prop()
   path?: string;
 
   @column()
+  @uielement("")
   @prop()
   line?: number;
 
   @column()
+  @uielement("")
   @prop()
   column?: number;
 
   @column()
+  @uielement("")
   @prop()
   url?: string;
 
   @column()
+  @uielement("")
   @prop()
   revision?: string;
 
@@ -623,38 +789,53 @@ export class DocSourceModel extends DocsModel {
  * to a `targetUid`; `anchor`/`route` point into the published output. Stored in the
  * `docs_references` table; serialized portably as {@link DocReferenceRecord}.
  * @class DocReferenceModel
+ * @category Models
  */
 @table("docs_references")
-@docsModel("DocReferenceModel")
+@model()
+@uimodel()
+@stableName("DocReferenceModel")
 export class DocReferenceModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   ownerUid!: string;
 
   @column()
+  @uielement("")
   @prop()
   index: number = 0;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   kind!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   targetLongname!: string;
 
   @column()
+  @uielement("")
   @prop()
   targetUid?: string;
 
   @column()
+  @uielement("")
   @prop()
   anchor?: string;
 
   @column()
+  @uielement("")
   @prop()
   route?: string;
 

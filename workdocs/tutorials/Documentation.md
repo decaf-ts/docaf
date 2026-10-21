@@ -162,8 +162,9 @@ npm run docs          # regenerate README and the API site
 npm run test:parity   # required when changing the type converter or JSDoc handling
 ```
 
-Open `docs/` through a local static server if you need to inspect navigation, search, or component
-pages. The site uses hash routing, so `index.html` can be served from any static host.
+Open `docs/index.html` directly from disk (`file://`) or through a local static server when you
+need to inspect navigation, search, or component pages. The site uses hash routing and relative
+asset URLs, so `index.html` also works when served from any static host subpath.
 
 For the full picture of what the generator emits, see the source under `src/generator/` and the
 parity fixtures under `tests/fixtures/parity/`.

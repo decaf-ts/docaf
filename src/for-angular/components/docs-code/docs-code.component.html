@@ -1,0 +1,9 @@
+<figure class="docs-code-block">
+  <figcaption class="docs-code-toolbar">
+    <span class="docs-code-language">{{ languageLabel }}</span>
+    <button type="button" class="docs-code-copy" (click)="copy()">
+      {{ copied ? "Copied" : "Copy" }}
+    </button>
+  </figcaption>
+  <pre class="docs-code"><code [innerHTML]="highlighted"></code></pre>
+</figure>

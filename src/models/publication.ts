@@ -1,7 +1,9 @@
 import { column, pk, table } from "@decaf-ts/core";
 import { prop } from "@decaf-ts/decoration";
-import { list, type ModelArg } from "@decaf-ts/decorator-validation";
-import { DocsModel, docsModel } from "./base";
+import { list, model, required, type ModelArg } from "@decaf-ts/decorator-validation";
+import { uielement, uimodel } from "@decaf-ts/ui-decorators";
+import { stableName } from "./naming";
+import { DocsModel } from "./base";
 
 /**
  * @description Decaf model for a tutorial document in the published documentation site.
@@ -10,55 +12,73 @@ import { DocsModel, docsModel } from "./base";
  * `order`, `childUids`). `docletUids` links the tutorial to the API symbols it documents.
  * Stored in the `docs_tutorials` table; serialized portably as {@link DocTutorialRecord}.
  * @class DocTutorialModel
+ * @category Models
  */
 @table("docs_tutorials")
-@docsModel("DocTutorialModel")
+@model()
+@uimodel()
+@stableName("DocTutorialModel")
 export class DocTutorialModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   name!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   title!: string;
 
   @column()
+  @uielement("")
   @prop()
   description?: string;
 
   @column()
+  @uielement("")
   @prop()
   content?: string;
 
   @column()
+  @uielement("")
   @prop()
   route?: string;
 
   @column()
+  @uielement("")
   @prop()
   sourceFile?: string;
 
   @column()
+  @uielement("")
   @prop()
   parentUid?: string;
 
   @column()
+  @uielement("")
   @prop()
   pageUid?: string;
 
   @column()
+  @uielement("")
   @prop()
   order?: number;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   childUids: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   docletUids: string[] = [];
@@ -76,56 +96,77 @@ export class DocTutorialModel extends DocsModel {
  * `sectionUids` and `tutorialUids` list the content shown on the page. Stored in the
  * `docs_pages` table; serialized portably as {@link DocPageRecord}.
  * @class DocPageModel
+ * @category Models
  */
 @table("docs_pages")
-@docsModel("DocPageModel")
+@model()
+@uimodel()
+@stableName("DocPageModel")
 export class DocPageModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   title!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   kind!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   route!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   layoutId!: string;
 
   @column()
+  @uielement("")
   @prop()
   routeId?: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   navigationUid!: string;
 
   @column()
+  @uielement("")
   @prop()
   parentUid?: string;
 
   @column()
+  @uielement("")
   @prop()
   order?: number;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   docletUids: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   sectionUids: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   tutorialUids: string[] = [];
@@ -143,42 +184,58 @@ export class DocPageModel extends DocsModel {
  * rendered in the section. Stored in the `docs_sections` table; serialized portably as
  * {@link DocSectionRecord}.
  * @class DocSectionModel
+ * @category Models
  */
 @table("docs_sections")
-@docsModel("DocSectionModel")
+@model()
+@uimodel()
+@stableName("DocSectionModel")
 export class DocSectionModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   pageUid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   key!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   kind!: string;
 
   @column()
+  @uielement("")
   @prop()
   title?: string;
 
   @column()
+  @uielement("")
   @prop()
   content?: string;
 
   @column()
+  @uielement("")
   @prop()
   order: number = 0;
 
   @column()
+  @uielement("")
   @prop()
   navigationUid?: string;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   docletUids: string[] = [];
@@ -195,34 +252,47 @@ export class DocSectionModel extends DocsModel {
  * aliases that should redirect to the current route. Stored in the `docs_routes` table;
  * serialized portably as {@link DocRouteRecord}.
  * @class DocRouteModel
+ * @category Models
  */
 @table("docs_routes")
-@docsModel("DocRouteModel")
+@model()
+@uimodel()
+@stableName("DocRouteModel")
 export class DocRouteModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   route!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   pageUid!: string;
 
   @column()
+  @uielement("")
   @prop()
   kind?: string;
 
   @column()
+  @uielement("")
   @prop()
   name?: string;
 
   @column()
+  @uielement("")
   @prop()
   anchor?: string;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   legacyRoutes: string[] = [];
@@ -239,34 +309,48 @@ export class DocRouteModel extends DocsModel {
  * `targetUid`) and carries the published `route`/`anchor` to follow. Stored in the
  * `docs_links` table; serialized portably as {@link DocLinkRecord}.
  * @class DocLinkModel
+ * @category Models
  */
 @table("docs_links")
-@docsModel("DocLinkModel")
+@model()
+@uimodel()
+@stableName("DocLinkModel")
 export class DocLinkModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   sourceUid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   role!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   targetLongname!: string;
 
   @column()
+  @uielement("")
   @prop()
   targetUid?: string;
 
   @column()
+  @uielement("")
   @prop()
   route?: string;
 
   @column()
+  @uielement("")
   @prop()
   anchor?: string;
 
@@ -283,50 +367,67 @@ export class DocLinkModel extends DocsModel {
  * items. Stored in the `docs_navigation` table; serialized portably as
  * {@link DocNavigationItemRecord}.
  * @class DocNavigationItemModel
+ * @category Models
  */
 @table("docs_navigation")
-@docsModel("DocNavigationItemModel")
+@model()
+@uimodel()
+@stableName("DocNavigationItemModel")
 export class DocNavigationItemModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   navigationUid!: string;
 
   @column()
+  @uielement("")
   @prop()
   parentUid?: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   label!: string;
 
   @column()
+  @uielement("")
   @prop()
   kind?: string;
 
   @column()
+  @uielement("")
   @prop()
   route?: string;
 
   @column()
+  @uielement("")
   @prop()
   anchor?: string;
 
   @column()
+  @uielement("")
   @prop()
   docletUid?: string;
 
   @column()
+  @uielement("")
   @prop()
   pageUid?: string;
 
   @column()
+  @uielement("")
   @prop()
   order: number = 0;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   childUids: string[] = [];
@@ -344,54 +445,73 @@ export class DocNavigationItemModel extends DocsModel {
  * by client-side search. Stored in the `docs_search` table; serialized portably as
  * {@link DocSearchEntryRecord}.
  * @class DocSearchEntryModel
+ * @category Models
  */
 @table("docs_search")
-@docsModel("DocSearchEntryModel")
+@model()
+@uimodel()
+@stableName("DocSearchEntryModel")
 export class DocSearchEntryModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
   @prop()
   docletUid?: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   name!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   longname!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   kind!: string;
 
   @column()
+  @uielement("")
   @prop()
   category?: string;
 
   @column()
+  @uielement("")
   @prop()
   subCategory?: string;
 
   @column()
+  @uielement("")
   @prop()
   summary?: string;
 
   @column()
+  @uielement("")
   @prop()
   route?: string;
 
   @column()
+  @uielement("")
   @prop()
   anchor?: string;
 
   @column()
+  @uielement("")
   @prop()
   rank: number = 0;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   tokens: string[] = [];
@@ -409,32 +529,44 @@ export class DocSearchEntryModel extends DocsModel {
  * scanning all records. Stored in the `docs_lookups` table; serialized portably as
  * {@link DocLookupRecord}.
  * @class DocLookupModel
+ * @category Models
  */
 @table("docs_lookups")
-@docsModel("DocLookupModel")
+@model()
+@uimodel()
+@stableName("DocLookupModel")
 export class DocLookupModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   lookupKind!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   value!: string;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   docletUids: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   pageUids: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   order?: number;
 
@@ -450,40 +582,54 @@ export class DocLookupModel extends DocsModel {
  * pieces; `config` carries layout-specific rendering settings. Stored in the `docs_layouts`
  * table; serialized portably as {@link DocLayoutRecord}.
  * @class DocLayoutModel
+ * @category Models
  */
 @table("docs_layouts")
-@docsModel("DocLayoutModel")
+@model()
+@uimodel()
+@stableName("DocLayoutModel")
 export class DocLayoutModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   name!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   tag!: string;
 
   @column()
+  @uielement("")
   @prop()
   title?: string;
 
   @column()
+  @uielement("")
   @prop()
   order?: number;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   slots: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   children: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   config?: Record<string, string | number | boolean>;
 
@@ -500,43 +646,59 @@ export class DocLayoutModel extends DocsModel {
  * per-table record `counts`. Stored in the `docs_manifests` table; serialized portably as
  * {@link DocManifestRecord}.
  * @class DocManifestModel
+ * @category Models
  */
 @table("docs_manifests")
-@docsModel("DocManifestModel")
+@model()
+@uimodel()
+@stableName("DocManifestModel")
 export class DocManifestModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
   @prop()
   schemaVersion: number = 1;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   projectName!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   projectVersion!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   buildId!: string;
 
   @column()
+  @uielement("")
   @prop()
   sourceRevision!: string;
 
   @column()
+  @uielement("")
   @prop()
   generator?: string;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   tableNames: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   counts?: Record<string, number>;
 

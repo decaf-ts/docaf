@@ -1,0 +1,15 @@
+<header class="docs-site-header">
+  <div class="docs-site-header-inner">
+    @if (brandBlock) {
+      <div class="docs-site-brand">
+        <ngx-decaf-component-renderer [tag]="brandBlock.tag" [globals]="brandBlock"></ngx-decaf-component-renderer>
+      </div>
+    }
+    @if (versionText) {
+      <span class="docs-site-version">{{ versionText }}</span>
+    }
+    @for (block of extraBlocks; track $index) {
+      <ngx-decaf-component-renderer [tag]="block.tag" [globals]="block"></ngx-decaf-component-renderer>
+    }
+  </div>
+</header>

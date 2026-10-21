@@ -2,7 +2,10 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { DocsCliOrchestrator } from "../../src/cli/orchestrator";
-import type { ResolvedDocsConfig } from "../../src/cli/types";
+import type {
+  DocsCliOptions,
+  ResolvedDocsConfig,
+} from "../../src/cli/types";
 import {
   REPO_ROOT,
   builtEsm,
@@ -34,18 +37,35 @@ function packageManifest(): PackageManifest {
   return readJson<PackageManifest>(path.join(REPO_ROOT, "package.json"));
 }
 
+const REPOSITORY_DOCS_ARGS = {
+  cwd: REPO_ROOT,
+  tsconfig: "./tsconfig.json",
+  include: ["src/**/*.ts"],
+  exclude: ["**/*.spec.ts", "**/*.test.ts", "**/*.d.ts"],
+  renderer: "angular",
+  output: "./docs",
+  baseHref: "./",
+  configuration: "production",
+} satisfies DocsCliOptions;
+
 function loadRepositoryConfig(): ResolvedDocsConfig {
   const result = runBuiltModule<ResolvedDocsConfig>({
     module: builtEsm("cli/config.js"),
-    exportName: "loadDocsConfig",
-    args: [{ cwd: REPO_ROOT }],
+    exportName: "resolveDocsConfig",
+    args: [REPOSITORY_DOCS_ARGS],
   });
   if (!result.ok || !result.value) {
     throw new Error(
-      `loadDocsConfig failed: ${JSON.stringify(result.error ?? result)}`
+      `resolveDocsConfig failed: ${JSON.stringify(result.error ?? result)}`
     );
   }
   return result.value;
+}
+
+function configFilesIn(directory: string): string[] {
+  return fs
+    .readdirSync(directory)
+    .filter((entry) => entry.startsWith("decafdocs.config."));
 }
 
 function dependencyNames(manifest: PackageManifest): string[] {
@@ -66,21 +86,47 @@ function withoutDescription(manifest: PackageManifest): string {
 afterAll(() => cleanupTempDirs());
 
 describe("docaf self-hosted docs config", () => {
-  it("resolves the repository's own decafdocs.config.ts", () => {
+  it("resolves the repository's own arguments-only docs build", () => {
     const config = loadRepositoryConfig();
 
     expect(config.root).toBe(REPO_ROOT);
-    expect(config.configPath).toBe(path.join(REPO_ROOT, "decafdocs.config.ts"));
+    expect("configPath" in config).toBe(false);
+    expect("config" in config).toBe(false);
     expect(config.project.name).toBe("@decaf-ts/docaf");
     expect(config.source.tsconfigPath).toBe(path.join(REPO_ROOT, "tsconfig.json"));
     expect(config.source.include).toEqual(["src/**/*.ts"]);
+    expect(config.source.exclude).toEqual([
+      "**/*.spec.ts",
+      "**/*.test.ts",
+      "**/*.d.ts",
+    ]);
     expect(config.targets).toHaveLength(1);
-    expect(config.targets[0]).toMatchObject({
+    expect(config.targets[0]).toEqual({
       renderer: "angular",
       output: path.join(REPO_ROOT, "docs"),
       routing: "hash",
+      baseHref: "./",
       configuration: "production",
     });
+  });
+
+  it("passes every docs setting as an explicit npm script argument", () => {
+    const script = packageManifest().scripts?.docs ?? "";
+
+    expect(script).toContain("decaf docs build");
+    expect(script).toContain("--tsconfig ./tsconfig.json");
+    expect(script).toContain('--include "src/**/*.ts"');
+    expect(script).toContain('--exclude "**/*.spec.ts" "**/*.test.ts" "**/*.d.ts"');
+    expect(script).toContain("--renderer angular");
+    expect(script).toContain("--output ./docs");
+    expect(script).toContain("--base-href ./");
+    expect(script).toContain("--configuration production");
+    expect(script.split(/\s+/)).not.toContain("--config");
+    expect(script).not.toContain("decafdocs.config");
+  });
+
+  it("has no config file in the repository root", () => {
+    expect(configFilesIn(REPO_ROOT)).toEqual([]);
   });
 });
 

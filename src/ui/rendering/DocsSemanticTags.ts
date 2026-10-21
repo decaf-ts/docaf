@@ -6,6 +6,9 @@
  * breadcrumbs), content elements (symbol, signature, members, examples, code,
  * component, preview, search, source, tutorial), and the leaf element slots
  * inside each view.
+ * @const DocsElements
+ * @category UI
+ * @memberOf module:docaf
  */
 // Framework-neutral semantic vocabulary used by every documentation renderer.
 // Shared layout and view models reference these tags only; a rendering target
@@ -71,6 +74,9 @@ export const DocsElements = {
  * @description Union of every semantic element tag declared in DocsElements.
  * @summary The tag type rendering targets must accept when mapping a docs
  * semantic tag to a native component.
+ * @typedef {string} DocsElement
+ * @category UI
+ * @memberOf module:docaf
  */
 export type DocsElement =
   (typeof DocsElements)[keyof typeof DocsElements];
@@ -81,6 +87,9 @@ export type DocsElement =
  * layouts, header, footer, sidebar, breadcrumbs, symbol, signature, members,
  * examples, code, component, preview, search, source, tutorial, and table of
  * contents. Any tag outside this list is optional for a rendering target.
+ * @const DOCS_REQUIRED_ELEMENTS
+ * @category UI
+ * @memberOf module:docaf
  */
 export const DOCS_REQUIRED_ELEMENTS: readonly DocsElement[] = [
   DocsElements.SITE_LAYOUT,

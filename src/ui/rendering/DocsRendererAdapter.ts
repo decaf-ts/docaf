@@ -7,6 +7,9 @@ import type { DocsRendererCapability } from "./DocsRendererCapabilities";
  * rendering itself. Adapters advertise their id, engine flavour, and capability
  * set, then initialize, register their elements and layouts, and create the
  * application for the publication runtime.
+ * @interface DocsRendererAdapter
+ * @category UI
+ * @memberOf module:docaf
  */
 // Renderer adapter contract. Implementations integrate an existing Decaf
 // rendering engine; they do not implement model rendering themselves.
@@ -27,6 +30,9 @@ export interface DocsRendererAdapter {
  * publication models across rendering targets: site layout, class and
  * component pages, tutorials, navigation, signatures, nested layouts, routing,
  * and search. Targets that fail a check do not conform to the shared contract.
+ * @interface DocsRendererContract
+ * @category UI
+ * @memberOf module:docaf
  */
 // Shared cross-renderer contract. Every rendering adapter is expected to
 // satisfy the same observable semantics for the same publication models.

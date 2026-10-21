@@ -88,10 +88,14 @@ async function publishStaging(
 }
 
 /**
- * Orchestrates the TDS §13.4 pipeline: extract once, publish once, snapshot
- * once, then compile each selected target in an isolated staging directory and
- * publish it atomically. A failed target never touches an existing output and
- * never mutates the shared snapshot.
+ * @description Orchestrates the TDS §13.4 docs pipeline from the CLI.
+ * @summary Extracts once, publishes once, and snapshots once, then compiles each selected
+ * target in an isolated staging directory and publishes it atomically. A failed target never
+ * touches an existing output and never mutates the shared snapshot (enforced by hashing the
+ * snapshot before and after the target builds). Reuses the cached snapshot when the inputs
+ * fingerprint matches the build-cache manifest.
+ * @class DocsCliOrchestrator
+ * @param {ResolvedDocsConfig} config - The resolved docs configuration driving every step.
  */
 export class DocsCliOrchestrator {
   private readonly config: ResolvedDocsConfig;
@@ -100,12 +104,35 @@ export class DocsCliOrchestrator {
     this.config = config;
   }
 
+  /**
+   * Runs the pipeline in snapshot mode.
+   *
+   * Extracts and publishes the docs and writes the target-independent snapshot
+   * (reusing the cache when possible) without building any renderer target.
+   * @returns {Promise<DocsOperationSummary>} The operation summary, including counts and the
+   * snapshot path; `targets` is always empty for this mode.
+   * @throws {DocsBuildError} When source selection, extraction, or snapshot validation fails.
+   */
   async snapshot(): Promise<DocsOperationSummary> {
     const started = Date.now();
     const prepared = await this.prepareSnapshot();
     return this.summary("snapshot", started, prepared, []);
   }
 
+  /**
+   * Runs the full pipeline: snapshot, then build every selected target.
+   *
+   * Prepares (or reuses) the snapshot, selects the targets to build, runs each target
+   * into an isolated staging directory that is published atomically on success, and verifies
+   * that no target mutated the shared snapshot. When no renderer is requested, all configured
+   * targets are built.
+   * @param {string[]} [requestedRenderers] - Optional renderer names restricting the build;
+   * each must be supported and have a configured target.
+   * @returns {Promise<DocsOperationSummary>} The operation summary with one
+   * {@link DocsTargetSummary} per built target.
+   * @throws {DocsBuildError} When no target is selected, a renderer is unsupported or
+   * unconfigured, a target build fails, or the snapshot was mutated during the build.
+   */
   async build(
     requestedRenderers?: readonly string[]
   ): Promise<DocsOperationSummary> {

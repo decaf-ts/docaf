@@ -50,6 +50,7 @@ export interface PublicationDataset {
  * @param {DocsDatabase} database - The initialized docs database to read from.
  * @returns {Promise<PublicationDataset>} The uid-sorted model collections for
  * all tables.
+ * @memberOf module:docaf
  */
 export async function loadPublicationDataset(
   database: DocsDatabase
@@ -116,6 +117,7 @@ function sortByUid<T extends { uid: string }>(models: T[]): T[] {
  * @param {T[]} models - The collection to update in place.
  * @param {T} model - The model to insert or replace.
  * @returns {T} The inserted or replacement model.
+ * @memberOf module:docaf
  */
 export function upsert<T extends { uid: string }>(models: T[], model: T): T {
   const index = models.findIndex((candidate) => candidate.uid === model.uid);
@@ -133,6 +135,7 @@ export function upsert<T extends { uid: string }>(models: T[], model: T): T {
  * @param {PublicationDataset} dataset - The dataset holding the tag collection.
  * @param {string} docletUid - Uid of the owning doclet.
  * @returns {DocTagModel[]} The tags owned by the doclet.
+ * @memberOf module:docaf
  */
 export function tagsFor(
   dataset: PublicationDataset,

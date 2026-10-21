@@ -8,9 +8,14 @@ import type { ResolvedDocsConfig, ResolvedDocsTarget } from "./types";
  * @summary Passed to every target factory when instantiating a {@link DocsBuildTarget}: the
  * docaf package root used to locate bundled assets/toolchain, and the Angular build
  * configuration ("production" or "development") resolved for the target.
+ * @interface BuildTargetOptions
+ * @memberOf module:docaf.cli
  */
 export interface BuildTargetOptions {
+  /** Absolute root of the installed `@decaf-ts/docaf` package. */
   packageRoot: string;
+
+  /** Angular build configuration to build the target with. */
   configuration: "production" | "development";
 }
 
@@ -28,7 +33,9 @@ const TARGET_FACTORIES: Record<string, TargetFactory> = {
  * @description Lists the renderer flavours that currently have a registered build target.
  * @summary Derived from the registered target factory map, sorted alphabetically; used for
  * error messages and renderer validation.
+ * @function supportedRenderers
  * @returns {string[]} Sorted list of supported renderer names.
+ * @memberOf module:docaf.cli
  */
 export function supportedRenderers(): string[] {
   return Object.keys(TARGET_FACTORIES).sort();
@@ -38,10 +45,12 @@ export function supportedRenderers(): string[] {
  * @description Instantiates the {@link DocsBuildTarget} for a resolved target configuration.
  * @summary Looks up the target factory registered for the target's renderer flavour and calls
  * it with the shared {@link BuildTargetOptions}.
+ * @function createBuildTarget
  * @param {ResolvedDocsTarget} target - The resolved target configuration to build with.
  * @param {BuildTargetOptions} options - Shared instantiation options (package root, build configuration).
  * @returns {DocsBuildTarget} The build target instance for the renderer.
  * @throws {DocsBuildError} When no build target is registered for the renderer.
+ * @memberOf module:docaf.cli
  */
 export function createBuildTarget(
   target: ResolvedDocsTarget,
@@ -68,10 +77,12 @@ export function createBuildTarget(
  * list, each renderer is validated against the registered factories and must have at least one
  * configured target; matching targets are returned de-duplicated by renderer/output while
  * preserving the requested order.
+ * @function selectTargets
  * @param {ResolvedDocsConfig} config - The resolved docs configuration with its targets.
  * @param {string[]} requested - Optional list of renderer names to restrict the build to.
  * @returns {ResolvedDocsTarget[]} The targets selected for the build.
  * @throws {DocsBuildError} When a requested renderer is unsupported or has no configured target.
+ * @memberOf module:docaf.cli
  */
 export function selectTargets(
   config: ResolvedDocsConfig,
@@ -122,9 +133,11 @@ export function selectTargets(
  * @summary Accepts either `--renderer <name>` (single renderer) or `--targets <comma or space
  * separated list>`; combining both raises an error. Returns undefined when neither is given,
  * meaning all configured targets should be built.
+ * @function parseRendererSelection
  * @param {object} options - The parsed CLI options (`renderer` and/or `targets`).
  * @returns {string[] | undefined} Renderer names to build, or undefined for all configured targets.
  * @throws {DocsBuildError} When both `--renderer` and `--targets` are provided.
+ * @memberOf module:docaf.cli
  */
 export function parseRendererSelection(options: {
   renderer?: string;

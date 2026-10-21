@@ -69,6 +69,7 @@ function addPage(
  * @param {DocletModel[]} doclets - Doclets to index.
  * @param {Array.<{uid: string, route: string, kind: string}>} pages - Pages to index.
  * @returns {DocLookupModel[]} Deterministically ordered lookup models ready for persistence.
+ * @memberOf module:docaf
  */
 export function buildDocLookupModels(
   doclets: readonly DocletModel[],
@@ -111,6 +112,7 @@ export function buildDocLookupModels(
  * await rebuildDocLookups(database);
  * @param {DocsDatabase} database - Docs database whose lookups are rebuilt in place.
  * @returns {Promise<DocLookupModel[]>} The rebuilt lookup models now stored in the database.
+ * @memberOf module:docaf
  */
 export async function rebuildDocLookups(
   database: DocsDatabase

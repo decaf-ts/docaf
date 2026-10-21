@@ -1,7 +1,9 @@
 import { column, pk, table } from "@decaf-ts/core";
 import { prop } from "@decaf-ts/decoration";
-import { list, type ModelArg } from "@decaf-ts/decorator-validation";
-import { DocsModel, docsModel } from "./base";
+import { list, model, required, type ModelArg } from "@decaf-ts/decorator-validation";
+import { uielement, uimodel } from "@decaf-ts/ui-decorators";
+import { stableName } from "./naming";
+import { DocsModel } from "./base";
 
 /**
  * @description Decaf model describing a documented UI component extracted from source code.
@@ -12,52 +14,72 @@ import { DocsModel, docsModel } from "./base";
  * {@link DocComponentPreviewModel} records. Stored in the `docs_components` table; serialized
  * portably as {@link DocComponentRecord}.
  * @class DocComponentModel
+ * @category Models
  */
 @table("docs_components")
-@docsModel("DocComponentModel")
+@model()
+@uimodel()
+@stableName("DocComponentModel")
 export class DocComponentModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   docletUid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   framework!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   name!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   exportName!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   sourceFile!: string;
 
   @column()
+  @uielement("")
   @prop()
   selector?: string;
 
   @column()
+  @uielement("")
   @prop()
   standalone?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   propertyUids: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   eventUids: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   previewUids: string[] = [];
@@ -75,50 +97,67 @@ export class DocComponentModel extends DocsModel {
  * `description`. Stored in the `docs_component_properties` table; serialized portably as
  * {@link DocComponentPropertyRecord}.
  * @class DocComponentPropertyModel
+ * @category Models
  */
 @table("docs_component_properties")
-@docsModel("DocComponentPropertyModel")
+@model()
+@uimodel()
+@stableName("DocComponentPropertyModel")
 export class DocComponentPropertyModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   componentUid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   name!: string;
 
   @column()
+  @uielement("")
   @prop()
   kind: string = "input";
 
   @column()
+  @uielement("")
   @prop()
   alias?: string;
 
   @column()
+  @uielement("")
   @prop()
   typeText?: string;
 
   @column()
+  @uielement("")
   @prop()
   typeId?: string;
 
   @column()
+  @uielement("")
   @prop()
   optional?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   required?: boolean;
 
   @column()
+  @uielement("")
   @prop()
   defaultValue?: string;
 
   @column()
+  @uielement("")
   @prop()
   description?: string;
 
@@ -134,34 +173,47 @@ export class DocComponentPropertyModel extends DocsModel {
  * object (`payloadTypeText`/`payloadTypeId`), and a `description`. Stored in the
  * `docs_component_events` table; serialized portably as {@link DocComponentEventRecord}.
  * @class DocComponentEventModel
+ * @category Models
  */
 @table("docs_component_events")
-@docsModel("DocComponentEventModel")
+@model()
+@uimodel()
+@stableName("DocComponentEventModel")
 export class DocComponentEventModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   componentUid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   name!: string;
 
   @column()
+  @uielement("")
   @prop()
   typeText?: string;
 
   @column()
+  @uielement("")
   @prop()
   payloadTypeText?: string;
 
   @column()
+  @uielement("")
   @prop()
   payloadTypeId?: string;
 
   @column()
+  @uielement("")
   @prop()
   description?: string;
 
@@ -179,47 +231,62 @@ export class DocComponentEventModel extends DocsModel {
  * values for the component's inputs in `inputDefaults`. Stored in the
  * `docs_component_previews` table; serialized portably as {@link DocComponentPreviewRecord}.
  * @class DocComponentPreviewModel
+ * @category Models
  */
 @table("docs_component_previews")
-@docsModel("DocComponentPreviewModel")
+@model()
+@uimodel()
+@stableName("DocComponentPreviewModel")
 export class DocComponentPreviewModel extends DocsModel {
+  @uielement("")
+  @required()
   @pk({ type: String, generated: false })
   uid!: string;
 
   @column()
+  @uielement("")
+  @required()
   @prop()
   componentUid!: string;
 
   @column()
+  @uielement("")
   @prop()
   name: string = "default";
 
   @column()
+  @uielement("")
   @prop()
   kind: string = "native";
 
   @column()
+  @uielement("")
   @prop()
   framework?: string;
 
   @column()
+  @uielement("")
   @prop()
   entry?: string;
 
   @column()
+  @uielement("")
   @prop()
   moduleId?: string;
 
   @column()
+  @uielement("")
   @prop()
   sourceFile?: string;
 
   @column()
+  @uielement("")
   @prop()
   @list(String)
   controls: string[] = [];
 
   @column()
+  @uielement("")
   @prop()
   inputDefaults?: Record<string, string | number | boolean>;
 

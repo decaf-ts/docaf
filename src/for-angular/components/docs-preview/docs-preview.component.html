@@ -1,0 +1,62 @@
+<section class="docs-preview">
+  <header class="docs-preview-header">
+    <h2>{{ preview?.title ?? "Preview" }}</h2>
+    @if (preview?.framework) {
+      <span class="docs-preview-framework">{{ preview?.framework }}</span>
+    }
+  </header>
+  @if (preview?.controls?.length) {
+    <div class="docs-preview-controls">
+      @for (control of preview?.controls; track control.name) {
+        <label class="docs-preview-control">
+          <span>{{ control.name }}</span>
+          @if (control.typeText === "boolean") {
+            <input
+              type="checkbox"
+              [checked]="asBoolean(control.value)"
+              (change)="setControl(control, $any($event.target).checked)"
+            />
+          } @else if (isNumber(control)) {
+            <input
+              type="number"
+              [value]="control.value"
+              (input)="setControl(control, $any($event.target).valueAsNumber)"
+            />
+          } @else {
+            <input
+              type="text"
+              [value]="asString(control.value)"
+              (input)="setControl(control, $any($event.target).value)"
+            />
+          }
+        </label>
+      }
+    </div>
+  }
+  <div class="docs-preview-stage">
+    @if (error) {
+      <p class="docs-preview-error" role="alert">{{ error }}</p>
+    }
+    <div #previewHost class="docs-preview-host"></div>
+    @if (!hasComponent && !error) {
+      <p class="docs-preview-fallback">
+        No executable preview registered for <code>{{ preview?.entry }}</code>.
+      </p>
+    }
+  </div>
+  @if (preview?.events?.length) {
+    <div class="docs-preview-events">
+      <h3>Events</h3>
+      @if (!events.length) {
+        <p class="docs-preview-empty">No events emitted yet.</p>
+      }
+      <ul>
+        @for (event of events; track $index) {
+          <li>
+            <code>{{ event.name }}</code>: {{ event.value | json }}
+          </li>
+        }
+      </ul>
+    </div>
+  }
+</section>

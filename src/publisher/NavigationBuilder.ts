@@ -79,6 +79,7 @@ export interface TutorialNavigationEntry {
  * "components", "tutorials") to the doclets belonging to each group, each list
  * sorted by longname then uid. Produced by NavigationBuilder.classify and
  * consumed by buildGroupNav, optionally split further by doclet category.
+ * @memberOf module:docaf
  */
 export type ClassifiedMembers = Record<string, DocletModel[]>;
 

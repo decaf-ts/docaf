@@ -1,0 +1,19 @@
+.docs-returns {
+  margin: 1rem 0;
+}
+.docs-returns-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+.docs-returns-table td {
+  font-size: 0.87rem;
+}
+.docs-returns-element,
+.docs-returns-nullable {
+  color: var(--docs-muted, #5f6b7a);
+}
+.docs-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}

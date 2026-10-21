@@ -1,0 +1,18 @@
+<nav class="docs-toc" aria-label="On this page">
+  @if (title) {
+    <h2 class="docs-toc-title">{{ title }}</h2>
+  }
+  @if (entries.length) {
+    <ul class="docs-toc-list">
+      @for (item of entries; track $index) {
+        <li class="docs-toc-item" [class.docs-toc-nested]="(item.level ?? 2) > 2">
+          @if (item.anchor) {
+            <a [routerLink]="[]" [fragment]="item.anchor">{{ item.label }}</a>
+          } @else {
+            <span>{{ item.label }}</span>
+          }
+        </li>
+      }
+    </ul>
+  }
+</nav>

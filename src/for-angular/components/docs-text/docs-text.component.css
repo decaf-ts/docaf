@@ -1,0 +1,14 @@
+.docs-heading {
+  margin: 0.4em 0;
+  line-height: 1.2;
+}
+.docs-heading-1 {
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+}
+.docs-heading-2 {
+  font-size: 1.35rem;
+}
+.docs-text {
+  color: var(--docs-muted);
+}

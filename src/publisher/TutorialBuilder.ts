@@ -117,6 +117,7 @@ export class TutorialBuilder {
  * symbol doclets before publication.
  * @param {DocletModel[]} doclets - The doclets to filter.
  * @returns {DocletModel[]} The doclets of kind "tutorial".
+ * @memberOf module:docaf
  */
 export function tutorialDoclets(
   doclets: readonly DocletModel[]

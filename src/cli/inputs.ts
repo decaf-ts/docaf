@@ -29,8 +29,19 @@ function escapeRegExp(value: string): string {
 }
 
 /**
- * Minimal glob matcher supporting the patterns used by docs configuration:
- * `**` (any number of segments), `*` (a single segment), `?`, and `{a,b}`.
+ * @description Minimal glob matcher supporting the patterns used by docs configuration.
+ * @summary Converts a glob pattern into an anchored regular expression: `**` matches any
+ * number of path segments (a `**` segment also matches zero directories), `*` matches within a
+ * single segment, `?` matches one character, and `{a,b}` alternates literal choices.
+ * Backslashes are normalized to slashes and a leading `./` is ignored before matching.
+ * @function globToRegExp
+ * @param {string} pattern - The glob pattern to convert (e.g. `src/cli/*.ts`).
+ * @returns {RegExp} An anchored regular expression matching relative file paths.
+ * @example
+ * ```ts
+ * globToRegExp("src/cli/*.ts").test("src/cli/config.ts"); // true
+ * ```
+ * @memberOf module:docaf.cli
  */
 export function globToRegExp(pattern: string): RegExp {
   const normalized = pattern.replace(/\\/g, "/").replace(/^\.\//, "");
@@ -95,9 +106,11 @@ function walk(directory: string, root: string, output: string[]): void {
  * glob patterns are matched against a recursive walk of the config root that skips generated
  * and hidden directories), removes files matched by `source.exclude`, de-duplicates and sorts
  * the results.
+ * @function resolveSourceFiles
  * @param {ResolvedDocsConfig} config - The resolved docs configuration with source settings.
  * @returns {DocsSourceFile[]} Sorted, de-duplicated list of selected source files (relative and absolute paths).
  * @throws {DocsBuildError} When no source file matches the include patterns.
+ * @memberOf module:docaf.cli
  */
 export function resolveSourceFiles(
   config: ResolvedDocsConfig
@@ -137,7 +150,7 @@ export function resolveSourceFiles(
         code: "DOCAF_NO_SOURCES",
         message: `No TypeScript sources matched ${JSON.stringify(
           config.source.include
-        )} under ${root}. Update source.include in your docs config.`,
+        )} under ${root}. Update the --include argument.`,
       },
     ]);
   }
@@ -185,8 +198,10 @@ function compileOptions(config: ResolvedDocsConfig): ts.CompilerOptions {
  * tsconfig (with `noEmit` forced), and a fingerprint that hashes the per-file content hashes
  * together with the compiler options, project metadata, and publisher flags. The fingerprint
  * lets the orchestrator reuse a cached snapshot when none of these changed.
+ * @function resolveDocsInputs
  * @param {ResolvedDocsConfig} config - The resolved docs configuration.
  * @returns {DocsInputs} The selected files, compiler options, and configuration fingerprint.
+ * @memberOf module:docaf.cli
  */
 export function resolveDocsInputs(config: ResolvedDocsConfig): DocsInputs {
   const files = resolveSourceFiles(config);

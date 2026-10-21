@@ -4,6 +4,9 @@
  * markdown and code highlighting, search, component previews, responsiveness,
  * and accessibility. Validation rejects a rendering target that cannot realize
  * a required page structure before publication.
+ * @typedef {string} DocsRendererCapability
+ * @category UI
+ * @memberOf module:docaf
  */
 export type DocsRendererCapability =
   | "layout.grid"
@@ -24,6 +27,9 @@ export type DocsRendererCapability =
  * @summary Requires grid and nested layouts, navigation, routing, markdown,
  * search, and responsive/accessibility support; renderers advertise additional
  * capabilities (such as component previews or code highlighting) on top of it.
+ * @const DOCS_BASE_CAPABILITIES
+ * @category UI
+ * @memberOf module:docaf
  */
 export const DOCS_BASE_CAPABILITIES: readonly DocsRendererCapability[] = [
   "layout.grid",
@@ -40,6 +46,9 @@ export const DOCS_BASE_CAPABILITIES: readonly DocsRendererCapability[] = [
  * @description Result of validating a renderer's capabilities against a requirement set.
  * @summary Lists the required capabilities the target does not support and the
  * alphabetically sorted set of capabilities the target advertises.
+ * @interface DocsRendererCapabilityReport
+ * @category UI
+ * @memberOf module:docaf
  */
 export interface DocsRendererCapabilityReport {
   missing: DocsRendererCapability[];
@@ -55,6 +64,9 @@ export interface DocsRendererCapabilityReport {
  * @param {Iterable<DocsRendererCapability>} required - capabilities the publication requires.
  * @param {Iterable<DocsRendererCapability>} supported - capabilities the renderer advertises.
  * @returns {DocsRendererCapabilityReport} missing and supported capabilities.
+ * @function validateDocsRendererCapabilities
+ * @category UI
+ * @memberOf module:docaf
  */
 export function validateDocsRendererCapabilities(
   required: Iterable<DocsRendererCapability>,

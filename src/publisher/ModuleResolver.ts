@@ -19,8 +19,11 @@ export interface ModuleResolutionOptions {
 }
 
 /**
- * Port of `attachModuleSymbols()` plus inheritance/ancestor resolution from
+ * @description Port of `attachModuleSymbols()` plus inheritance/ancestor resolution from
  * BetterDocs' publisher.
+ * @summary Resolves `memberof` longnames to owner uids and completes
+ * inheritance/ancestor links over the publication dataset.
+ * @class ModuleResolver
  */
 export class ModuleResolver {
   constructor(private readonly options: ModuleResolutionOptions) {}
@@ -73,21 +76,23 @@ export class ModuleResolver {
       }
     }
 
-    for (const module of dataset.doclets.filter(
-      (doclet) => doclet.kind === "module"
+    for (const container of dataset.doclets.filter(
+      (doclet) => doclet.kind === "module" || doclet.kind === "namespace"
     )) {
       const symbols = dataset.doclets.filter(
         (doclet) =>
-          doclet.uid !== module.uid &&
-          (doclet.longname === module.longname ||
-            doclet.name === module.name)
+          doclet.uid !== container.uid &&
+          (doclet.longname === container.longname ||
+            doclet.memberof === container.longname ||
+            (container.kind === "module" &&
+              doclet.name === container.name))
       );
-      module.propertyIds = symbols.map((symbol) => symbol.uid);
+      container.propertyIds = symbols.map((symbol) => symbol.uid);
       for (const symbol of symbols) {
-        this.addReference(dataset, module, "module-symbol", symbol);
+        this.addReference(dataset, container, "module-symbol", symbol);
         if (!symbol.memberof) {
-          symbol.memberof = module.longname;
-          symbol.memberofUid = module.uid;
+          symbol.memberof = container.longname;
+          symbol.memberofUid = container.uid;
         }
       }
     }

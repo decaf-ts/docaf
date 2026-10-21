@@ -1,0 +1,15 @@
+<header class="docs-symbol">
+  @if (kind) {
+    <span class="docs-symbol-kind">{{ kind }}</span>
+  }
+  <h1 class="docs-symbol-title">{{ title || textValue }}</h1>
+  @if (category) {
+    <p class="docs-symbol-category">{{ category }}</p>
+  }
+  @if (summaryHtml) {
+    <div class="docs-symbol-summary docs-prose" [innerHTML]="summaryHtml"></div>
+  }
+  @for (block of extras; track $index) {
+    <ngx-decaf-component-renderer [tag]="block.tag" [globals]="block"></ngx-decaf-component-renderer>
+  }
+</header>

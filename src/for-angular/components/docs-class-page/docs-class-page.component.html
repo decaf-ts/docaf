@@ -1,0 +1,23 @@
+<article class="docs-page docs-class-page">
+  @if (breadcrumbsBlock) {
+    <div class="docs-page-breadcrumbs">
+      <ngx-decaf-component-renderer [tag]="breadcrumbsBlock.tag" [globals]="breadcrumbsBlock"></ngx-decaf-component-renderer>
+    </div>
+  }
+  @if (symbolBlock) {
+    <div class="docs-page-symbol">
+      <ngx-decaf-component-renderer [tag]="symbolBlock.tag" [globals]="symbolBlock"></ngx-decaf-component-renderer>
+    </div>
+  }
+  @if (sectionsBlock) {
+    <div class="docs-page-sections">
+      <ngx-decaf-component-renderer [tag]="sectionsBlock.tag" [globals]="sectionsBlock"></ngx-decaf-component-renderer>
+    </div>
+  }
+  @if (relatedBlock) {
+    <ngx-decaf-component-renderer [tag]="relatedBlock.tag" [globals]="relatedBlock"></ngx-decaf-component-renderer>
+  }
+  @for (block of extraBlocks; track $index) {
+    <ngx-decaf-component-renderer [tag]="block.tag" [globals]="block"></ngx-decaf-component-renderer>
+  }
+</article>

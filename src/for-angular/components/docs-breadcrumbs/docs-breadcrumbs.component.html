@@ -1,0 +1,13 @@
+<nav class="docs-breadcrumbs" aria-label="Breadcrumb">
+  <ol class="docs-breadcrumb-list">
+    @for (item of crumbs; track $index) {
+      <li class="docs-breadcrumb-item">
+        @if (item.route) {
+          <a [routerLink]="item.route">{{ item.label }}</a>
+        } @else {
+          <span aria-current="page">{{ item.label }}</span>
+        }
+      </li>
+    }
+  </ol>
+</nav>

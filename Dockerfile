@@ -70,7 +70,7 @@ USER node
 
 WORKDIR /workspace
 
-# `docker run <image> build --config ...` => `decaf docs build --config ...`
+# `docker run <image> build --output ...` => `decaf docs build --output ...`
 ENTRYPOINT ["decaf", "docs"]
 
 LABEL org.opencontainers.image.title="@decaf-ts/docaf" \

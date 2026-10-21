@@ -2,7 +2,7 @@
 
 This guide is for people changing `@decaf-ts/docaf` itself. To *use* the generator in another
 project, start with [How to Use](../5-HowToUse.md). The short version: install the package and
-`@decaf-ts/cli`, write `decafdocs.config.ts`, and run `decaf docs build`.
+`@decaf-ts/cli`, then run `decaf docs build` with arguments only - there is no configuration file.
 
 ### Prerequisites
 
@@ -49,6 +49,72 @@ repository or in `package.json`.
 Build output is `lib/` (ESM and CJS) and `dist/` (bundles). The self-hosted site is written to
 `docs/`, and the portable snapshot to `.decaf-docs/`. None of those are hand-edited.
 
+### Architecture
+
+The generator runs in two phases that share one artifact, the target-independent snapshot.
+
+**Extraction and publication.** `DocsPipeline` runs a single TypeScript program over the selected
+sources and publishes documentation as data-only decaf-native models (`DocletModel`, `DocTagModel`,
+`DocTypeModel`, `DocParameterModel`, `DocReturnModel`, `DocSignatureModel`, `DocExampleModel`, and
+related records). Every concrete model class is decorated with `@table` and `@uimodel()` and lives
+in `RamAdapter`-backed repositories. The published dataset is written once to
+`.decaf-docs/snapshot.json`; renderer targets read it and never rewrite it.
+
+**CLI contract.** Every setting is resolved from CLI arguments; there is no configuration file and
+the CLI never looks for one. Omitted arguments fall back to the documented defaults, so a project
+with only a `tsconfig.json` and a `src/` directory builds without any arguments. Relative paths
+resolve from the current directory.
+
+**Rendering.** Pages are decaf UI views: view classes under `src/ui/` map semantic elements with
+`@uielement(...)` and `@uichild(...)`, and `AngularDocsRendererAdapter` creates an
+`NgxRenderingEngine` and registers one dedicated Angular component per docs semantic element (the
+component folders under `src/for-angular/components/`). The Angular target copies the snapshot into
+a generated app and builds it in a staging directory; the built site is moved to the output
+directory only after the build succeeds, so a failed build leaves the previous output untouched.
+
+**File-open output strategy.** The emitted site uses hash routing and relative asset URLs
+(`--base-href ./` by default). Under `file://` an injected `file-protocol-shim.js` plus the global
+`assets/docs/snapshot.js` script feed the snapshot to the runtime without network access; over
+HTTP the runtime fetches `assets/docs/snapshot.json` instead. `--base-href /` is only for sites
+always served from the domain root.
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#E8F0FE", "primaryBorderColor": "#7BAAF7", "primaryTextColor": "#1F2937", "lineColor": "#6B7280", "actorBkg": "#E8F0FE", "actorBorder": "#7BAAF7", "actorTextColor": "#1F2937", "signalColor": "#4B5563", "signalTextColor": "#1F2937", "labelBoxBkgColor": "#FDF2E3", "labelBoxBorderColor": "#F0C674", "labelTextColor": "#1F2937", "loopTextColor": "#1F2937", "noteBkgColor": "#FDF2E3", "noteBorderColor": "#F0C674"}}}%%
+sequenceDiagram
+    autonumber
+    participant CLI as decaf docs
+    participant Pipe as DocsPipeline
+    participant Snap as snapshot.json
+    participant Site as Angular target (staging)
+    participant App as Browser runtime
+
+    CLI->>Pipe: settings from CLI args; extract + publish
+    activate Pipe
+    Pipe-->>CLI: decaf-native models (@table + @uimodel)
+    deactivate Pipe
+    CLI->>Snap: write target-independent snapshot (once)
+    activate Snap
+    Snap-->>CLI: immutable snapshot
+    deactivate Snap
+    CLI->>Site: copy snapshot, build, rewrite index.html
+    activate Site
+    Site-->>CLI: build succeeded
+    deactivate Site
+    CLI->>CLI: move staging into output
+    App->>Site: open docs/index.html
+    activate Site
+    alt file:// protocol
+        Site-->>App: snapshot.js + file-protocol-shim.js globals
+    else http(s)
+        Site-->>App: fetch assets/docs/snapshot.json
+    end
+    deactivate Site
+    App->>App: hydrate DocsRuntime
+    activate App
+    App->>App: render pages via NgxRenderingEngine
+    deactivate App
+```
+
 ### Build scripts
 
 | Command | Purpose |
@@ -59,7 +125,9 @@ Build output is `lib/` (ESM and CJS) and `dist/` (bundles). The self-hosted site
 | `npm run docs` | `readme` + clean `docs/` + build + `decaf docs build` |
 | `npm run readme` | Compose `README.md` from `workdocs/` with `markdown-include` |
 
-`npm run docs` dogfoods the generator against `src/` using `decafdocs.config.ts`. It calls the
+`npm run docs` dogfoods the generator against `src/` with arguments only: it composes the README,
+builds the package, then runs `decaf docs build --tsconfig ./tsconfig.json --include "src/**/*.ts"
+--renderer angular --output ./docs --base-href ./ --configuration production`. It calls the
 `decaf` binary from the local `@decaf-ts/cli` devDependency; run `npm ci` before using it.
 
 ### Tests
@@ -144,9 +212,9 @@ unverified tree.
 
 ### Common pitfalls
 
-- Running `decaf docs` from the wrong directory: config discovery starts at the current
-  directory, and without `--config` an absent file produces default configuration, while a
-  missing explicit `--config` path produces `DOCAF_CONFIG_MISSING`.
+- Running `decaf docs` from the wrong directory: relative `--tsconfig`, `--snapshot-dir`, and
+  `--output` paths resolve from the current directory, so run from the project root that contains
+  `tsconfig.json`; a missing tsconfig produces `DOCAF_CONFIG_TSCONFIG_MISSING`.
 - Editing `README.md` directly: the next `npm run readme` overwrites it.
 - Assuming renderers can mutate the snapshot: they cannot; `snapshot` is the shareable,
   target-independent artifact.

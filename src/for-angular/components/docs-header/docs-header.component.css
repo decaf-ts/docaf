@@ -1,0 +1,23 @@
+.docs-site-header {
+  border-bottom: 1px solid var(--docs-border, #d7dbe0);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+}
+.docs-site-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  max-width: 96rem;
+  margin: 0 auto;
+  padding: 0.8rem 1.5rem;
+}
+.docs-site-version {
+  color: var(--docs-muted, #5f6b7a);
+  font-size: 0.82rem;
+  border: 1px solid var(--docs-border, #d7dbe0);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+}
+.docs-site-brand {
+  margin-inline-end: auto;
+}

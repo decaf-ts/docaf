@@ -1,0 +1,50 @@
+@if (groups.length) {
+  <div class="docs-members">
+    @for (group of groups; track group.kind) {
+      <section class="docs-member-group">
+        <h3 class="docs-member-group-title">
+          {{ group.label }}
+          <span class="docs-member-count">{{ group.members.length }}</span>
+        </h3>
+        <div class="docs-table-wrap">
+          <table class="docs-table docs-member-table">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Type / signature</th>
+                <th scope="col">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (member of group.members; track member.uid) {
+                <tr class="docs-member" [attr.id]="member.anchor">
+                  <td class="docs-member-name">
+                    @if (member.route) {
+                      <a [routerLink]="member.route" [fragment]="member.anchor">{{ member.name }}</a>
+                    } @else {
+                      <span>{{ member.name }}</span>
+                    }
+                    @if (member.kind) {
+                      <span class="docs-member-kind">{{ member.kind }}</span>
+                    }
+                    @if (member.access) {
+                      <span class="docs-badge">{{ member.access }}</span>
+                    }
+                  </td>
+                  <td class="docs-member-signature">
+                    @if (member.signature) {
+                      <code>{{ member.signature }}</code>
+                    }
+                  </td>
+                  <td class="docs-member-description">{{ member.description }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  </div>
+} @else {
+  <docs-children [blocks]="blocks" />
+}

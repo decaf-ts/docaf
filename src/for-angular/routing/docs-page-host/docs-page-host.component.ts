@@ -8,8 +8,8 @@ import {
 import { NavigationEnd, Router } from "@angular/router";
 import { ModelRendererComponent } from "@decaf-ts/for-angular";
 import { filter, Subscription } from "rxjs";
-import type { DocsSiteLayout } from "../../ui/layouts/DocsSiteLayout";
-import { DocsAngularRuntime } from "../runtime/DocsAngularRuntime";
+import type { DocsSiteLayout } from "../../../ui/layouts/DocsSiteLayout";
+import { DocsAngularRuntime } from "../../runtime/DocsAngularRuntime";
 
 /**
  * @description Angular route host component that renders a docs page layout for the current route.
@@ -19,27 +19,24 @@ import { DocsAngularRuntime } from "../runtime/DocsAngularRuntime";
  * the runtime on first use); repeated routes are skipped. Renders the layout through the Decaf
  * model renderer, or a loading/error placeholder while the snapshot is unavailable, and cleans
  * up its subscription on destroy.
+ * @component DocsPageHostComponent
+ * @example
+ * // app.routes.ts - catch-all route of the static docs application
+ * { path: "**", component: DocsPageHostComponent }
+ * @category Routing
  * @class DocsPageHostComponent
  */
 @Component({
   selector: "docs-page-host",
   standalone: true,
   imports: [CommonModule, ModelRendererComponent],
-  template: `
-    @if (layout) {
-      <ngx-decaf-model-renderer [model]="layout" />
-    } @else if (error) {
-      <div class="docs-page-error" role="alert">
-        <h1>Documentation unavailable</h1>
-        <p>{{ error }}</p>
-      </div>
-    } @else {
-      <div class="docs-page-loading" role="status">Loading documentation…</div>
-    }
-  `,
+  templateUrl: "./docs-page-host.component.html",
+  styleUrl: "./docs-page-host.component.css",
 })
 export class DocsPageHostComponent implements OnInit, OnDestroy {
+  /** @description The resolved site layout for the current route, when loaded. */
   layout?: DocsSiteLayout;
+  /** @description Error message from the last failed layout resolution, if any. */
   error?: string;
 
   private subscription?: Subscription;
@@ -51,6 +48,12 @@ export class DocsPageHostComponent implements OnInit, OnDestroy {
     private readonly changeDetector: ChangeDetectorRef
   ) {}
 
+  /**
+   * @description Loads the layout for the initial route and subscribes to navigation.
+   * @summary Subscribes to router `NavigationEnd` events so each navigation
+   * reloads the layout, then resolves the layout for the current URL once.
+   * @returns {Promise<void>} resolves when the initial layout load finishes.
+   */
   async ngOnInit(): Promise<void> {
     this.subscription = this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
@@ -58,6 +61,10 @@ export class DocsPageHostComponent implements OnInit, OnDestroy {
     await this.load(this.router.url);
   }
 
+  /**
+   * @description Unsubscribes from router events.
+   * @returns {void}
+   */
   ngOnDestroy(): void {
     this.subscription?.unsubscribe();
   }

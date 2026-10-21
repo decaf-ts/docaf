@@ -12,6 +12,10 @@ import type { DocletModel } from "../../../src/models";
 export const FIXTURES = path.resolve(__dirname, "../../fixtures");
 export const VERTICAL_SLICE = path.join(FIXTURES, "vertical-slice/src");
 export const KINDS_FIXTURE = path.join(FIXTURES, "typescript-kinds/kinds.ts");
+export const DESCRIPTIONS_FIXTURE = path.join(
+  FIXTURES,
+  "typescript-kinds/descriptions.ts"
+);
 export const SIGNALS_FIXTURE = path.join(
   FIXTURES,
   "angular-signals/signals.component.ts"

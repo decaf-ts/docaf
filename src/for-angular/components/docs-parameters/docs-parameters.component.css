@@ -1,0 +1,22 @@
+.docs-parameters {
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+.docs-parameters-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+.docs-parameters-table td {
+  font-size: 0.87rem;
+}
+.docs-parameter-name code {
+  font-weight: 600;
+}
+.docs-optional {
+  color: var(--docs-accent, #1f5fbf);
+}
+.docs-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}

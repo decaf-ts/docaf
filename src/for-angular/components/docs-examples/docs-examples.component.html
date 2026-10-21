@@ -1,0 +1,10 @@
+<div class="docs-examples">
+  @for (example of examples; track example.uid) {
+    <section class="docs-example">
+      @if (example.caption) {
+        <h3 class="docs-example-caption">{{ example.caption }}</h3>
+      }
+      <docs-code [code]="example.code" [language]="example.language"></docs-code>
+    </section>
+  }
+</div>

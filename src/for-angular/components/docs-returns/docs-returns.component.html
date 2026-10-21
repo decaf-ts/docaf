@@ -1,0 +1,33 @@
+@if (returns.length) {
+  <section class="docs-returns">
+    <h3 class="docs-returns-title">Returns</h3>
+    <div class="docs-table-wrap">
+      <table class="docs-table docs-returns-table">
+        <thead>
+          <tr>
+            <th scope="col">Role</th>
+            <th scope="col">Type</th>
+            <th scope="col">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of returns; track entry.uid) {
+            <tr>
+              <td>{{ entry.role }}</td>
+              <td>
+                <code>{{ entry.typeText }}</code>
+                @if (entry.elementTypeText) {
+                  <span class="docs-returns-element"> of {{ entry.elementTypeText }}</span>
+                }
+                @if (entry.nullable) {
+                  <span class="docs-returns-nullable"> | null</span>
+                }
+              </td>
+              <td>{{ entry.description }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+}

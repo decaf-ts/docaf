@@ -5,6 +5,7 @@ jest.mock("@angular/core", () => {
   }
   return {
     Component: decorator,
+    Directive: decorator,
     Injectable: decorator,
     Inject: decorator,
     Input: decorator,
@@ -141,8 +142,9 @@ function harness(loader: (() => Promise<unknown>) | undefined): Harness {
   const viewContainer = {
     createComponent: jest.fn(() => ref),
   };
+  const injector = { get: jest.fn(() => runtime) };
   const component = new DocsPreviewComponent(
-    runtime as never,
+    injector as never,
     changeDetector as never
   );
   component.previewHost = viewContainer as never;

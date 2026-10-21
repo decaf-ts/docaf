@@ -1,0 +1,13 @@
+<article class="docs-page docs-source-page">
+  @if (symbolBlock) {
+    <div class="docs-page-symbol">
+      <ngx-decaf-component-renderer [tag]="symbolBlock.tag" [globals]="symbolBlock"></ngx-decaf-component-renderer>
+    </div>
+  }
+  @if (sourceBlock) {
+    <ngx-decaf-component-renderer [tag]="sourceBlock.tag" [globals]="sourceBlock"></ngx-decaf-component-renderer>
+  }
+  @for (block of extraBlocks; track $index) {
+    <ngx-decaf-component-renderer [tag]="block.tag" [globals]="block"></ngx-decaf-component-renderer>
+  }
+</article>

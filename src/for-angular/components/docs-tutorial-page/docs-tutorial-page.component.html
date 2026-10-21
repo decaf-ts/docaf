@@ -1,0 +1,15 @@
+<article class="docs-page docs-tutorial-page">
+  @if (symbolBlock) {
+    <div class="docs-page-symbol">
+      <ngx-decaf-component-renderer [tag]="symbolBlock.tag" [globals]="symbolBlock"></ngx-decaf-component-renderer>
+    </div>
+  }
+  @if (tutorialBlock) {
+    <div class="docs-page-tutorial">
+      <ngx-decaf-component-renderer [tag]="tutorialBlock.tag" [globals]="tutorialBlock"></ngx-decaf-component-renderer>
+    </div>
+  }
+  @for (block of extraBlocks; track $index) {
+    <ngx-decaf-component-renderer [tag]="block.tag" [globals]="block"></ngx-decaf-component-renderer>
+  }
+</article>

@@ -1,0 +1,27 @@
+.docs-breadcrumbs {
+  font-size: 0.82rem;
+  margin: 0 0 0.75rem;
+}
+.docs-breadcrumb-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.docs-breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--docs-muted, #5f6b7a);
+}
+.docs-breadcrumb-item:not(:last-child)::after {
+  content: "/";
+  color: var(--docs-border, #d7dbe0);
+}
+.docs-breadcrumb-item a {
+  text-decoration: none;
+  color: var(--docs-accent, #1f5fbf);
+}

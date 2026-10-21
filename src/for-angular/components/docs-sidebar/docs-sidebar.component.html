@@ -1,0 +1,5 @@
+<aside class="docs-sidebar" aria-label="Documentation navigation">
+  @for (block of blocks; track $index) {
+    <ngx-decaf-component-renderer [tag]="block.tag" [globals]="block"></ngx-decaf-component-renderer>
+  }
+</aside>

@@ -1,0 +1,22 @@
+.docs-page {
+  display: block;
+  min-width: 0;
+}
+.docs-page-breadcrumbs {
+  margin-bottom: 0.5rem;
+}
+.docs-page-symbol {
+  margin-bottom: 1.5rem;
+}
+.docs-page-section {
+  margin: 1.5rem 0;
+}
+.docs-home-hero {
+  padding: 2.5rem 0 1.5rem;
+  border-bottom: 1px solid var(--docs-border, #d7dbe0);
+  margin-bottom: 1rem;
+}
+.docs-home-sections .docs-section {
+  display: inline-block;
+  width: 100%;
+}

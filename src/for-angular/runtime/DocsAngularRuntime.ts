@@ -1,17 +1,15 @@
 import { Inject, Injectable, InjectionToken } from "@angular/core";
 import { InternalError } from "@decaf-ts/db-decorators";
 import { DocsRuntime } from "../../runtime/DocsRuntime";
+import type { DocsSnapshotV1 } from "../../snapshot/records";
 import { DocsPageService } from "../../ui/DocsPageService";
 import type { DocsAngularPreviewSource } from "../rendering/DocsAngularComponents";
-import {
-  registerAngularDocsElements,
-  registerAngularDocsLayouts,
-} from "../rendering/AngularDocsRendererAdapter";
 
 /**
  * @description Map of preview keys to preview loaders for the Angular docs runtime.
  * @summary Keys are component UIDs, preview entry names, or preview UIDs produced by the docs
  * build; values are dynamic loaders returning the Angular component class for each preview.
+ * @memberOf module:docaf
  */
 export type DocsAngularPreviewRegistry = Record<
   string,
@@ -36,6 +34,7 @@ export const DOCS_ANGULAR_PREVIEWS = new InjectionToken<DocsAngularPreviewRegist
  */
 export interface DocsAngularRuntimeOptions {
   snapshotUrl?: string;
+  snapshot?: DocsSnapshotV1;
 }
 
 /**
@@ -56,14 +55,15 @@ export class DocsAngularRuntime {
   private readonly loaders = new Map<string, DocsAngularPreviewSource>();
   private snapshotUrl?: string;
   private loading?: Promise<DocsPageService>;
+  private registration?: Promise<void>;
 
   constructor(
-    @Inject(DOCS_ANGULAR_PREVIEWS) previews: DocsAngularPreviewRegistry
+    @Inject(DOCS_ANGULAR_PREVIEWS) previews: DocsAngularPreviewRegistry,
+    private readonly suppliedSnapshot?: DocsSnapshotV1
   ) {
-    registerAngularDocsElements();
-    registerAngularDocsLayouts();
     for (const [key, loader] of Object.entries(previews ?? {}))
       this.loaders.set(key, loader);
+    void this.ensureElements();
   }
 
   get pageService(): DocsPageService {
@@ -95,10 +95,12 @@ export class DocsAngularRuntime {
     if (this.loading) return this.loading;
     this.snapshotUrl =
       options.snapshotUrl ?? this.snapshotUrl ?? "assets/docs/snapshot.json";
+    const snapshot = options.snapshot ?? this.suppliedSnapshot;
     this.loading = (async () => {
-      const database = await this.runtime.initialize(
-        this.snapshotUrl as string
-      );
+      await this.ensureElements();
+      const database = snapshot
+        ? await this.runtime.bootstrap(snapshot)
+        : await this.runtime.initialize(this.snapshotUrl as string);
       this.service = new DocsPageService(database);
       return this.service;
     })();
@@ -107,5 +109,17 @@ export class DocsAngularRuntime {
     } finally {
       this.loading = undefined;
     }
+  }
+
+  private ensureElements(): Promise<void> {
+    if (!this.registration) {
+      this.registration = (async () => {
+        const { registerAngularDocsElements, registerAngularDocsLayouts } =
+          await import("../rendering/AngularDocsRendererAdapter");
+        registerAngularDocsElements();
+        registerAngularDocsLayouts();
+      })();
+    }
+    return this.registration;
   }
 }

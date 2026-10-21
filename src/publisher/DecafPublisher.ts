@@ -87,9 +87,10 @@ export interface PublicationResult {
 }
 
 /**
- * Coordinates the deterministic publication order:
- * prune -> sort -> sources -> signatures -> modules -> links -> tutorials ->
- * navigation -> pages -> search -> persist.
+ * @description Coordinates the deterministic publication order.
+ * @summary Runs prune -> sort -> sources -> signatures -> modules -> links -> tutorials ->
+ * navigation -> pages -> search -> persist over the docs database (or a pre-loaded dataset).
+ * @class DecafPublisher
  */
 export class DecafPublisher {
   readonly options: DecafPublisherOptions;
@@ -228,6 +229,26 @@ export class DecafPublisher {
       dataset[key] = (dataset[key] as { ownerUid?: string }[]).filter(
         (model) => !model.ownerUid || retains(model.ownerUid)
       ) as never;
+    }
+    const orphanSignatures = new Set(
+      dataset.signatures
+        .filter((signature) => !retains(signature.docletUid))
+        .map((signature) => signature.uid)
+    );
+    if (orphanSignatures.size) {
+      dataset.signatures = dataset.signatures.filter(
+        (signature) => !orphanSignatures.has(signature.uid)
+      );
+      dataset.parameters = dataset.parameters.filter(
+        (parameter) =>
+          !parameter.signatureUid ||
+          !orphanSignatures.has(parameter.signatureUid)
+      );
+      dataset.returns = dataset.returns.filter(
+        (returns) =>
+          !returns.signatureUid ||
+          !orphanSignatures.has(returns.signatureUid)
+      );
     }
     dataset.componentProperties = dataset.componentProperties.filter(
       (property) =>

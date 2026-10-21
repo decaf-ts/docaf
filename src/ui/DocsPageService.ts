@@ -25,10 +25,12 @@ import {
   DocsNavigationEntry,
   DocsNavigationView,
   DocsPageSectionsView,
+  DocsParameterEntry,
   DocsPreviewControlEntry,
   DocsPreviewEntry,
   DocsPreviewView,
   DocsRelatedSymbolsView,
+  DocsReturnEntry,
   DocsSearchEntry,
   DocsSearchView,
   DocsSectionEntry,
@@ -58,6 +60,7 @@ const CLASS_KINDS = new Set([
   "enum",
   "mixin",
   "external",
+  "function",
 ]);
 
 function normalizeRoute(path: string): string {
@@ -110,6 +113,9 @@ function parseDefault(value: string | undefined): unknown {
  * @summary Allows callers to override the navigation set used to build the
  * sidebar. When neither a page record nor this option provides a navigation
  * UID, the service falls back to the "navigation:main" navigation record.
+ * @interface DocsPageServiceOptions
+ * @category UI
+ * @memberOf module:docaf
  */
 export interface DocsPageServiceOptions {
   navigationUid?: string;
@@ -129,6 +135,7 @@ export interface DocsPageServiceOptions {
  * @example
  * const service = new DocsPageService(database);
  * const layout = await service.resolveLayout("/components/button");
+ * @category UI
  */
 // Renderer-neutral page service. It resolves a route to a complete nested
 // Decaf layout model graph; every rendering target consumes the same graph.
@@ -142,10 +149,26 @@ export class DocsPageService {
     this.queries = new DocsQueryService(database);
   }
 
+  /**
+   * @description Exposes the underlying docs database.
+   * @summary Convenience accessor for renderers or services that need to query
+   * the same snapshot the page service reads from, without a second reference.
+   * @returns {DocsDatabase} the database this service was built with.
+   */
   get store(): DocsDatabase {
     return this.database;
   }
 
+  /**
+   * @description Resolves a raw path to the page record serving it.
+   * @summary Normalizes the path with the canonical route rules, then resolves
+   * in order: a direct page-route match, a route record mapping, the "home"
+   * page, and finally the first page by order. Throws only when the snapshot
+   * has no pages at all.
+   * @param {string} path - raw route or URL path (hash and query are ignored).
+   * @returns {Promise<DocPageModel>} the page record serving the normalized route.
+   * @throws {NotFoundError} when the database contains no pages.
+   */
   async resolvePage(path: string): Promise<DocPageModel> {
     const route = normalizeRoute(path);
     const direct = await this.queries.findPageByRoute(route);
@@ -167,11 +190,47 @@ export class DocsPageService {
     throw new NotFoundError(`No documentation page matches route "${route}"`);
   }
 
+  /**
+   * @description Resolves a raw path to the full nested layout graph for rendering.
+   * @summary Convenience composition of {@link DocsPageService.resolvePage} and
+   * {@link DocsPageService.layoutFor}: resolves which page serves the path and
+   * then builds the complete site layout for it.
+   * @param {string} path - raw route or URL path to resolve.
+   * @returns {Promise<DocsSiteLayout>} the complete nested layout for the route.
+   */
   async resolveLayout(path: string): Promise<DocsSiteLayout> {
     const page = await this.resolvePage(path);
     return this.layoutFor(page);
   }
 
+  /**
+   * @description Composes the complete nested layout graph for a known page.
+   * @summary Loads the manifest, sidebar navigation, root doclet, sections and
+   * search index from the database, then assembles the site chrome (header,
+   * footer, sidebar, table of contents) and the kind-specific content layout
+   * chosen by {@link DocsPageService.contentFor}.
+   * @mermaid
+   * sequenceDiagram
+   *   autonumber
+   *   participant C as Renderer
+   *   participant S as DocsPageService
+   *   participant Q as DocsQueryService
+   *   participant D as DocsDatabase
+   *   C->>S: layoutFor(page)
+   *   activate S
+   *   S->>D: manifest / navigation / sections / search
+   *   activate D
+   *   D-->>S: models
+   *   deactivate D
+   *   S->>Q: findDocletByUid / findNavigation
+   *   activate Q
+   *   Q-->>S: records
+   *   deactivate Q
+   *   S-->>C: DocsSiteLayout
+   *   deactivate S
+   * @param {DocPageModel} page - the page record to compose the layout for.
+   * @returns {Promise<DocsSiteLayout>} the complete site layout graph.
+   */
   async layoutFor(page: DocPageModel): Promise<DocsSiteLayout> {
     const manifest = await this.manifest();
     const navItems = await this.navigationItems(page);
@@ -225,20 +284,40 @@ export class DocsPageService {
     });
   }
 
+  /**
+   * @description Searches the documentation search index for a term.
+   * @summary Delegates to the query service's ranked search and maps the raw
+   * records into renderer-neutral {@link DocsSearchEntry} view models.
+   * @param {string} term - free-text search term.
+   * @param {number} [limit] - maximum number of results to return (default 50).
+   * @returns {Promise<DocsSearchEntry[]>} ranked search entries matching the term.
+   */
   async search(term: string, limit = 50): Promise<DocsSearchEntry[]> {
     const results = await this.queries.search(term, limit);
     return results.map((entry) => this.searchEntry(entry));
   }
 
-  async searchIndex(limit = 250): Promise<DocsSearchEntry[]> {
+  /**
+   * @description Returns the pre-built search index entries used by the sidebar.
+   * @summary Reads every search record, sorts by descending rank (then uid for
+   * determinism) and maps them into {@link DocsSearchEntry} view models. The
+   * whole index is returned so client-side filtering can reach every documented
+   * symbol; result caps belong to the per-query view, not to the index itself.
+   * @param {number} [limit] - optional maximum number of entries to return; when
+   * omitted every indexed entry is returned.
+   * @returns {Promise<DocsSearchEntry[]>} the ranked search index entries.
+   */
+  async searchIndex(limit?: number): Promise<DocsSearchEntry[]> {
     const records = await this.database.search.select().execute();
-    return [...records]
+    const ranked = [...records]
       .sort(
         (a, b) =>
           (b.rank ?? 0) - (a.rank ?? 0) || a.uid.localeCompare(b.uid)
       )
-      .slice(0, limit)
       .map((entry) => this.searchEntry(entry));
+    return typeof limit === "number"
+      ? ranked.slice(0, Math.max(0, limit))
+      : ranked;
   }
 
   private async contentFor(
@@ -412,6 +491,8 @@ export class DocsPageService {
                 },
               ]
             : undefined;
+          entry.parameters = await this.parametersFor(signature);
+          entry.returns = await this.returnsFor(signature);
         }
       } else if (section.kind === "members") {
         entry.members = await this.members(section.docletUids);
@@ -431,7 +512,10 @@ export class DocsPageService {
       } else if (section.kind === "source") {
         const doclet = await this.firstDoclet(section.docletUids);
         const source = await this.sourceFor(doclet);
-        if (source) entry.code = source.fileName;
+        if (source) {
+          entry.source = source;
+          entry.code = source.fileName;
+        }
       }
       entries.push(entry);
     }
@@ -491,6 +575,54 @@ export class DocsPageService {
       }
     }
     return undefined;
+  }
+
+  private async parametersFor(
+    signature: DocSignatureModel | undefined
+  ): Promise<DocsParameterEntry[]> {
+    if (!signature) return [];
+    const entries: DocsParameterEntry[] = [];
+    for (const uid of signature.parameterIds ?? []) {
+      try {
+        const parameter = await this.database.parameters.read(uid);
+        entries.push({
+          uid: parameter.uid,
+          name: parameter.name,
+          typeText: parameter.typeText,
+          optional: parameter.optional,
+          rest: parameter.rest,
+          defaultValue: parameter.defaultValue,
+          description: parameter.description,
+        });
+      } catch (error) {
+        if (!(error instanceof NotFoundError)) throw error;
+      }
+    }
+    return entries;
+  }
+
+  private async returnsFor(
+    signature: DocSignatureModel | undefined
+  ): Promise<DocsReturnEntry[]> {
+    if (!signature) return [];
+    const entries: DocsReturnEntry[] = [];
+    for (const uid of [signature.returnId, signature.yieldId]) {
+      if (!uid) continue;
+      try {
+        const returned = await this.database.returns.read(uid);
+        entries.push({
+          uid: returned.uid,
+          role: returned.role,
+          typeText: returned.typeText,
+          description: returned.description,
+          nullable: returned.nullable,
+          elementTypeText: returned.elementTypeText,
+        });
+      } catch (error) {
+        if (!(error instanceof NotFoundError)) throw error;
+      }
+    }
+    return entries;
   }
 
   private async examples(uids: string[]): Promise<DocsExampleEntry[]> {
@@ -716,6 +848,9 @@ export class DocsPageService {
  * navigation; the given entries are passed through unchanged.
  * @param {DocsSearchEntry[]} entries - ranked search index entries to expose.
  * @returns {DocsSearchView} a search view model carrying the given entries.
+ * @function buildSearchView
+ * @category UI
+ * @memberOf module:docaf
  */
 export function buildSearchView(entries: DocsSearchEntry[]): DocsSearchView {
   return new DocsSearchView({ entries });
@@ -730,6 +865,9 @@ export function buildSearchView(entries: DocsSearchEntry[]): DocsSearchView {
  * @param {DocComponentPropertyModel[]} properties - input properties of the component.
  * @param {DocComponentEventModel[]} events - output events of the component.
  * @returns {DocsComponentViewEntry} the renderer-independent component view record.
+ * @function componentView
+ * @category UI
+ * @memberOf module:docaf
  */
 export function componentView(
   component: DocComponentModel,
@@ -767,6 +905,9 @@ export function componentView(
  * to "/".
  * @param {string} path - raw route or URL path to normalize.
  * @returns {string} the canonical documentation route.
+ * @function normalizeDocsRoute
+ * @category UI
+ * @memberOf module:docaf
  */
 export function normalizeDocsRoute(path: string): string {
   return normalizeRoute(path);
@@ -781,6 +922,9 @@ export function normalizeDocsRoute(path: string): string {
  * @param {string} path - raw route to validate and normalize.
  * @returns {string} the normalized, "/"-rooted documentation route.
  * @throws {InternalError} when the normalized route is not rooted at "/".
+ * @function assertDocsPageRoute
+ * @category UI
+ * @memberOf module:docaf
  */
 export function assertDocsPageRoute(path: string): string {
   const route = normalizeRoute(path);

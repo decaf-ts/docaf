@@ -1,0 +1,36 @@
+.docs-symbol {
+  margin: 0.5rem 0 1.5rem;
+}
+.docs-symbol-kind {
+  display: inline-block;
+  margin-bottom: 0.4rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #1f5fbf;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.docs-symbol-title {
+  margin: 0;
+  font-size: 2.15rem;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+.docs-symbol-category {
+  margin: 0.3rem 0 0;
+  color: var(--docs-muted, #5f6b7a);
+  font-size: 0.86rem;
+}
+.docs-symbol-summary {
+  margin-top: 0.8rem;
+  color: #273444;
+  font-size: 1rem;
+}
+:host ::ng-deep .docs-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}

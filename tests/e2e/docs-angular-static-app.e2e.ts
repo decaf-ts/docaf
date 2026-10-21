@@ -3,19 +3,41 @@ import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { Script } from "node:vm";
 
+import { Logging } from "@decaf-ts/logging";
 import { DocsDatabase } from "../../lib/esm/database/index.js";
 import { DocumentationCompiler } from "../../lib/esm/generator/compiler/DocumentationCompiler.js";
 import { AngularDocsBuildTarget } from "../../lib/esm/build/index.js";
 
+const log = Logging.for("docaf e2e");
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const PROJECT = { name: "@fixture/adapter", version: "1.0.0" };
 const SLICE = path.join(ROOT, "tests/fixtures/vertical-slice/src");
 const NATIVE_PREVIEW = path.join(ROOT, "tests/fixtures/native-preview/src");
+const OVERFLOW_SLICE = path.join(
+  ROOT,
+  "tests/fixtures/overflow-regression/src"
+);
+const DOCAF_SOURCE = path.join(ROOT, "src");
+const INDEXED_SYMBOL_PROBES: readonly (readonly [string, string])[] = [
+  ["DocsPreviewComponent", "component"],
+  ["DocsPageService", "class"],
+  ["AngularDocsBuildTargetOptions", "interface"],
+  ["composeSignature", "function"],
+  ["slugify", "function"],
+  ["configFingerprint", "function"],
+  ["searchIndex", "member"],
+];
 const ARTIFACTS = path.join(ROOT, "tmp/e2e-artifacts");
 const CLASS_ROUTE = "/#/docs/classes/RamAdapter";
 const COMPONENT_ROUTE = "/#/docs/components/DocWidgetComponent";
+const NARROW_VIEWPORT = { width: 390, height: 844 };
+const OVERFLOW_CLASS_ROUTE = "/#/docs/classes/RamAdapter";
+const OVERFLOW_FUNCTION_ROUTE =
+  "/#/docs/functions/createAdapterDescriptorWithLongConfigurationChain";
+const OVERFLOW_INTERFACE_ROUTE = "/#/docs/interfaces/AdapterConfig";
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -88,8 +110,14 @@ function staticServer(directory: string) {
 
 async function buildApp(
   name: string,
-  sourceDirectory: string
-): Promise<{ baseUrl: string; output: string; close: () => Promise<void> }> {
+  sourceDirectory: string,
+  options: { baseHref?: string } = {}
+): Promise<{
+  baseUrl: string;
+  output: string;
+  snapshot: any;
+  close: () => Promise<void>;
+}> {
   const output = path.join(ROOT, `tmp/e2e-angular-docs-${name}`);
   const snapshotPath = path.join(ROOT, `tmp/e2e-${name}-snapshot.json`);
   await fs.mkdir(path.dirname(snapshotPath), { recursive: true });
@@ -114,7 +142,10 @@ async function buildApp(
     projectRoot: sourceDirectory,
     snapshotPath,
     outputDirectory: output,
-    config: { project: { name: PROJECT.name }, output: { baseHref: "/" } },
+    config: {
+      project: { name: PROJECT.name },
+      output: { baseHref: options.baseHref ?? "/" },
+    },
     components: result.extraction.components,
     previews: [],
     layouts: await database.layouts.select().execute(),
@@ -134,11 +165,25 @@ async function buildApp(
   return {
     baseUrl: `http://127.0.0.1:${address.port}`,
     output,
+    snapshot: result.snapshot,
     close: () =>
       new Promise<void>((resolve, reject) =>
         server.close((error) => (error ? reject(error) : resolve()))
       ),
   };
+}
+
+function expectedSearchEntries(snapshot: {
+  tables: {
+    doclets: { metadata?: Record<string, string>; linkId?: string }[];
+    tutorials: unknown[];
+  };
+}): number {
+  const searchableDoclets = snapshot.tables.doclets.filter(
+    (doclet) =>
+      doclet.metadata?.undocumented !== "true" && Boolean(doclet.linkId)
+  );
+  return searchableDoclets.length + snapshot.tables.tutorials.length;
 }
 
 function collector(page: any) {
@@ -152,6 +197,56 @@ function collector(page: any) {
     consoleErrors.push(text.slice(0, 300));
   });
   return { pageErrors, consoleErrors };
+}
+
+async function assertDedicatedSourceBlock(
+  page: any,
+  route: string,
+  expectedPath: string
+): Promise<Evidence> {
+  await page.goto(route, { waitUntil: "networkidle" });
+  const section = page.locator(".docs-section-source").first();
+  await section.waitFor({ state: "visible", timeout: 5000 });
+  const docsSource = section.locator("docs-source").first();
+  await docsSource.waitFor({ state: "visible", timeout: 5000 });
+  const pathText = (
+    await docsSource.locator(".docs-source-file code").first().innerText()
+  ).trim();
+  assert.ok(
+    pathText.includes(expectedPath),
+    `dedicated docs-source did not identify ${expectedPath}; observed: ${JSON.stringify(
+      pathText
+    )}`
+  );
+  const fallbackParagraphs = await section
+    .locator(".docs-source-reference")
+    .count();
+  assert.equal(
+    fallbackParagraphs,
+    0,
+    "source section still rendered the fallback docs-source-reference paragraph"
+  );
+  const sectionText = (await section.innerText()).trim();
+  assert.ok(
+    !sectionText.includes("Defined in"),
+    `source section still rendered the "Defined in" fallback text: ${JSON.stringify(
+      sectionText
+    )}`
+  );
+  const pageSourceBlocks = await page.locator("docs-source").count();
+  assert.ok(
+    pageSourceBlocks > 0,
+    "the page rendered no dedicated docs-source elements"
+  );
+  return {
+    route,
+    tag: await docsSource.evaluate((element: Element) =>
+      element.tagName.toLowerCase()
+    ),
+    path: pathText,
+    fallbackParagraphs,
+    pageSourceBlocks,
+  };
 }
 
 async function assertResponsiveDocsNavigation(
@@ -201,12 +296,205 @@ async function assertResponsiveDocsNavigation(
   };
 }
 
+type OverflowRequirement = "wideTable" | "longCode";
+
+async function assertNarrowViewportContainment(
+  page: any,
+  route: string,
+  requirements: OverflowRequirement[] = [],
+  expectedHeading?: string
+): Promise<Evidence> {
+  await page.goto(route, { waitUntil: "networkidle" });
+  await page
+    .locator(".docs-nav")
+    .first()
+    .waitFor({ state: "visible", timeout: 15000 });
+  await page
+    .locator(".docs-page")
+    .first()
+    .waitFor({ state: "visible", timeout: 15000 });
+  if (expectedHeading) {
+    await page
+      .getByRole("heading", { name: expectedHeading, level: 1 })
+      .waitFor({ state: "visible", timeout: 15000 });
+  }
+  await page.waitForTimeout(250);
+  const audit = await page.evaluate(() => {
+    const viewportWidth = document.documentElement.clientWidth;
+    const scrollableOverflow = new Set(["auto", "scroll", "hidden", "clip"]);
+    const describe = (element: Element): string => {
+      const tag = element.tagName.toLowerCase();
+      const id = element.id ? `#${element.id}` : "";
+      const classes = Array.from(element.classList)
+        .slice(0, 3)
+        .map((name) => `.${name}`)
+        .join("");
+      return `${tag}${id}${classes}`;
+    };
+    const isScrollContainer = (element: Element): boolean => {
+      const style = getComputedStyle(element);
+      return (
+        scrollableOverflow.has(style.overflowX) &&
+        element.scrollWidth > element.clientWidth + 1
+      );
+    };
+    const clippedByScrollContainer = (element: Element): boolean => {
+      let ancestor = element.parentElement;
+      while (ancestor && ancestor !== document.documentElement) {
+        if (isScrollContainer(ancestor)) return true;
+        ancestor = ancestor.parentElement;
+      }
+      return false;
+    };
+    const measure = (selector: string) =>
+      Array.from(document.querySelectorAll(selector)).map((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return {
+          element: describe(element),
+          clientWidth: element.clientWidth,
+          scrollWidth: element.scrollWidth,
+          overflowX: style.overflowX,
+          right: Math.round(rect.right * 100) / 100,
+          visible: Boolean(rect.width || rect.height),
+        };
+      });
+
+    const offenders: {
+      element: string;
+      right: number;
+      width: number;
+      text: string;
+    }[] = [];
+    let excludedClipped = 0;
+    let excludedSkipLink = 0;
+    for (const element of Array.from(document.querySelectorAll("body *"))) {
+      if (element.matches("a.docs-skip-link")) {
+        excludedSkipLink += 1;
+        continue;
+      }
+      const style = getComputedStyle(element);
+      if (style.display === "none" || style.visibility === "hidden") continue;
+      const rect = element.getBoundingClientRect();
+      if (!rect.width && !rect.height) continue;
+      if (rect.right <= viewportWidth + 1) continue;
+      if (clippedByScrollContainer(element)) {
+        excludedClipped += 1;
+        continue;
+      }
+      offenders.push({
+        element: describe(element),
+        right: Math.round(rect.right * 100) / 100,
+        width: Math.round(rect.width * 100) / 100,
+        text: (element.textContent ?? "").trim().slice(0, 100),
+      });
+    }
+
+    return {
+      url: window.location.href,
+      heading: document.querySelector("h1")?.textContent?.trim() ?? null,
+      viewportWidth,
+      scrollingElementScrollWidth: document.scrollingElement
+        ? document.scrollingElement.scrollWidth
+        : null,
+      documentElementScrollWidth: document.documentElement.scrollWidth,
+      bodyScrollWidth: document.body.scrollWidth,
+      offenders,
+      excludedClipped,
+      excludedSkipLink,
+      tableWraps: measure(".docs-table-wrap"),
+      codeBlocks: measure("pre.docs-code"),
+    };
+  });
+
+  if (expectedHeading) {
+    assert.equal(
+      audit.heading,
+      expectedHeading,
+      `narrow-viewport page rendered the wrong heading: ${JSON.stringify(audit)}`
+    );
+  }
+  assert.ok(
+    audit.scrollingElementScrollWidth !== null &&
+      audit.scrollingElementScrollWidth <= audit.viewportWidth + 1,
+    `document.scrollingElement overflows horizontally at 390x844: ${JSON.stringify(
+      audit
+    )}`
+  );
+  assert.ok(
+    audit.documentElementScrollWidth <= audit.viewportWidth + 1,
+    `document.documentElement overflows horizontally at 390x844: ${JSON.stringify(
+      audit
+    )}`
+  );
+  assert.ok(
+    audit.bodyScrollWidth <= audit.viewportWidth + 1,
+    `document.body overflows horizontally at 390x844: ${JSON.stringify(audit)}`
+  );
+  assert.deepEqual(
+    audit.offenders,
+    [],
+    `visible elements extend past the 390px viewport edge: ${JSON.stringify(
+      audit.offenders
+    )}`
+  );
+
+  const internalScrollers = (entries: typeof audit.tableWraps) =>
+    entries.filter(
+      (entry) =>
+        entry.visible &&
+        entry.scrollWidth > entry.clientWidth + 1 &&
+        entry.overflowX === "auto"
+    );
+  const wideTables = internalScrollers(audit.tableWraps);
+  const longCodeBlocks = internalScrollers(audit.codeBlocks);
+
+  if (requirements.includes("wideTable")) {
+    assert.ok(
+      wideTables.length > 0,
+      `no .docs-table-wrap scrolled internally at 390x844; observed: ${JSON.stringify(
+        audit.tableWraps
+      )}`
+    );
+  }
+  if (requirements.includes("longCode")) {
+    assert.ok(
+      longCodeBlocks.length > 0,
+      `no pre.docs-code scrolled internally at 390x844; observed: ${JSON.stringify(
+        audit.codeBlocks
+      )}`
+    );
+  }
+
+  return {
+    route,
+    viewport: NARROW_VIEWPORT,
+    heading: audit.heading,
+    scrollWidths: {
+      scrollingElement: audit.scrollingElementScrollWidth,
+      documentElement: audit.documentElementScrollWidth,
+      body: audit.bodyScrollWidth,
+      clientWidth: audit.viewportWidth,
+    },
+    offenders: audit.offenders,
+    excludedClipped: audit.excludedClipped,
+    excludedSkipLink: audit.excludedSkipLink,
+    wideTables,
+    longCodeBlocks,
+  };
+}
+
 async function main(): Promise<void> {
   await fs.mkdir(ARTIFACTS, { recursive: true });
   const apps: { close: () => Promise<void> }[] = [];
   let browser: any;
   let built: { baseUrl: string; output: string } | undefined;
   let nativeBuilt: { baseUrl: string; output: string } | undefined;
+  let fileBuilt: { baseUrl: string; output: string } | undefined;
+  let overflowBuilt: { baseUrl: string; output: string } | undefined;
+  let docafBuilt:
+    | { baseUrl: string; output: string; snapshot: any }
+    | undefined;
   const results: Result[] = [];
 
   const test = async (
@@ -246,9 +534,18 @@ async function main(): Promise<void> {
     process.stderr.write("building slice docs app\n");
     built = await buildApp("slice", SLICE);
     apps.push(built);
+    process.stderr.write("building overflow-regression docs app\n");
+    overflowBuilt = await buildApp("overflow-regression", OVERFLOW_SLICE);
+    apps.push(overflowBuilt);
     process.stderr.write("building native-preview docs app\n");
     nativeBuilt = await buildApp("native-preview", NATIVE_PREVIEW);
     apps.push(nativeBuilt);
+    process.stderr.write("building file-mode docs app\n");
+    fileBuilt = await buildApp("file-mode", SLICE, { baseHref: "./" });
+    apps.push(fileBuilt);
+    process.stderr.write("building docaf self-hosted docs app\n");
+    docafBuilt = await buildApp("docaf", DOCAF_SOURCE);
+    apps.push(docafBuilt);
     process.stderr.write("launching browser\n");
     const { chromium } = playwright();
     browser = await chromium.launch({
@@ -273,24 +570,13 @@ async function main(): Promise<void> {
       };
     });
 
-    await test("class page renders a visible Source section naming adapter.ts", async (page) => {
-      await page.goto(`${built!.baseUrl}${CLASS_ROUTE}`, {
-        waitUntil: "networkidle",
-      });
-      const source = page
-        .locator(".docs-section")
-        .filter({
-          has: page.getByRole("heading", { name: "Source", exact: true }),
-        })
-        .first();
-      await source.waitFor({ state: "visible", timeout: 5000 });
-      const text = (await source.innerText()).trim();
-      assert.ok(
-        text.includes("adapter.ts"),
-        `Source section did not identify adapter.ts; observed: ${JSON.stringify(text)}`
-      );
-      return { source: text };
-    });
+    await test("class page renders a dedicated docs-source block naming adapter.ts", (page) =>
+      assertDedicatedSourceBlock(
+        page,
+        `${built!.baseUrl}${CLASS_ROUTE}`,
+        "adapter.ts"
+      )
+    );
 
     await test("anchored method read exists, is visible, and scrolls into view", async (page) => {
       await page.goto(`${built!.baseUrl}${CLASS_ROUTE}`, {
@@ -436,6 +722,51 @@ async function main(): Promise<void> {
       { viewport: { width: 390, height: 844 } }
     );
 
+    const narrowOverflowRoutes: {
+      name: string;
+      route: string;
+      requirements: OverflowRequirement[];
+      heading?: string;
+    }[] = [
+      {
+        name: "home page has no horizontal overflow or clipped-past-viewport elements at 390x844",
+        route: "/",
+        requirements: [],
+      },
+      {
+        name: "class page keeps its wide member table and long code line internally scrollable at 390x844",
+        route: OVERFLOW_CLASS_ROUTE,
+        requirements: ["wideTable", "longCode"],
+        heading: "RamAdapter",
+      },
+      {
+        name: "function page keeps its long example code internally scrollable at 390x844",
+        route: OVERFLOW_FUNCTION_ROUTE,
+        requirements: ["longCode"],
+        heading: "createAdapterDescriptorWithLongConfigurationChain",
+      },
+      {
+        name: "interface page keeps its wide member table internally scrollable at 390x844",
+        route: OVERFLOW_INTERFACE_ROUTE,
+        requirements: ["wideTable"],
+        heading: "AdapterConfig",
+      },
+    ];
+
+    for (const entry of narrowOverflowRoutes) {
+      await test(
+        entry.name,
+        (page) =>
+          assertNarrowViewportContainment(
+            page,
+            `${overflowBuilt!.baseUrl}${entry.route}`,
+            entry.requirements,
+            entry.heading
+          ),
+        { viewport: NARROW_VIEWPORT }
+      );
+    }
+
     await test("keyboard tab reaches a sidebar link and Enter navigates", async (page) => {
       await page.goto(`${built!.baseUrl}${CLASS_ROUTE}`, {
         waitUntil: "networkidle",
@@ -525,6 +856,135 @@ async function main(): Promise<void> {
       return { snapshotStatuses, heading: await heading.textContent() };
     });
 
+    await test("file-mode output is a classic non-module bundle", async () => {
+      const output = fileBuilt!.output;
+      const html = await fs.readFile(path.join(output, "index.html"), "utf8");
+      assert.ok(
+        !/type\s*=\s*["']module["']/i.test(html),
+        `file-mode index.html still declares a module script: ${html.slice(0, 500)}`
+      );
+      assert.ok(
+        !html.includes("modulepreload"),
+        "file-mode index.html still contains a modulepreload link"
+      );
+      assert.ok(
+        html.includes('<base href="./">'),
+        `file-mode index.html is missing <base href="./">: ${html.slice(0, 500)}`
+      );
+      const scripts = [
+        'src="assets/docs/snapshot.js"',
+        'src="assets/i18n/en.js"',
+        'src="file-protocol-shim.js"',
+        'src="main.js"',
+      ];
+      let cursor = -1;
+      for (const script of scripts) {
+        const index = html.indexOf(script);
+        assert.ok(
+          index > cursor,
+          `file-mode index.html is missing ${script} or has it out of order`
+        );
+        cursor = index;
+      }
+      const entries = await fs.readdir(output);
+      assert.ok(entries.includes("main.js"), "file-mode output has no main.js");
+      assert.ok(
+        entries.includes("file-protocol-shim.js"),
+        "file-mode output has no file-protocol-shim.js"
+      );
+      const hashed = entries.filter((entry) =>
+        /^(?:chunk-.*|main-[^.]+|polyfills-[^.]+)\.(?:js|js\.map)$/.test(entry)
+      );
+      assert.deepEqual(
+        hashed,
+        [],
+        `file-mode output still contains non-classic bundles: ${hashed.join(", ")}`
+      );
+      const main = await fs.readFile(path.join(output, "main.js"), "utf8");
+      assert.doesNotThrow(
+        () => new Script(main, { filename: "main.js" }),
+        "file-mode main.js is not a classic script"
+      );
+      return {
+        output,
+        baseHref: './',
+        scripts,
+        entries,
+        mainBytes: main.length,
+      };
+    });
+
+    await test("file:// direct open renders class and interface pages and survives reload", async (page) => {
+      const fileUrl = pathToFileURL(path.join(fileBuilt!.output, "index.html"));
+      fileUrl.hash = CLASS_ROUTE.replace(/^\//, "");
+      const failedRequests: string[] = [];
+      page.on("requestfailed", (request: any) => {
+        failedRequests.push(
+          `${request.url()} :: ${request.failure()?.errorText ?? "unknown"}`
+        );
+      });
+
+      await page.goto(fileUrl.href, { waitUntil: "load" });
+      const classHeading = page.getByRole("heading", {
+        name: "RamAdapter",
+        level: 1,
+      });
+      await classHeading.waitFor({ state: "visible", timeout: 10000 });
+      const initial = await page.evaluate(() => ({
+        protocol: location.protocol,
+        hash: location.hash,
+        heading: document.querySelector("h1")?.textContent ?? null,
+        pageError:
+          document.querySelector(".docs-page-error")?.textContent ?? null,
+        snapshotLoaded: Boolean(
+          (globalThis as Record<string, unknown>).__DOCAF_DOCS_SNAPSHOT__
+        ),
+        i18nLoaded: Boolean(
+          (globalThis as Record<string, unknown>).__DOCAF_DOCS_I18N__
+        ),
+      }));
+      assert.equal(initial.protocol, "file:");
+      assert.equal(initial.hash, "#/docs/classes/RamAdapter");
+      assert.equal(initial.heading, "RamAdapter");
+      assert.equal(initial.pageError, null);
+      assert.equal(initial.snapshotLoaded, true);
+      assert.equal(initial.i18nLoaded, true);
+
+      await page
+        .locator(".docs-nav a", { hasText: "AdapterConfig" })
+        .first()
+        .click();
+      await page.waitForURL(/#\/docs\/interfaces\/AdapterConfig$/);
+      const interfaceHeading = page.getByRole("heading", {
+        name: "AdapterConfig",
+        level: 1,
+      });
+      await interfaceHeading.waitFor({ state: "visible", timeout: 10000 });
+      const navigated = page.url();
+
+      await page.reload({ waitUntil: "load" });
+      await page
+        .getByRole("heading", { name: "AdapterConfig", level: 1 })
+        .waitFor({ state: "visible", timeout: 10000 });
+      const reloaded = await page.evaluate(() => ({
+        hash: location.hash,
+        heading: document.querySelector("h1")?.textContent ?? null,
+        pageError:
+          document.querySelector(".docs-page-error")?.textContent ?? null,
+      }));
+      assert.equal(reloaded.hash, "#/docs/interfaces/AdapterConfig");
+      assert.equal(reloaded.heading, "AdapterConfig");
+      assert.equal(reloaded.pageError, null);
+      assert.deepEqual(failedRequests, [], "file:// requests failed");
+      return {
+        file: fileUrl.href,
+        initial,
+        navigated,
+        reloaded,
+        failedRequests,
+      };
+    });
+
     await test("sidebar search filters and navigates", async (page) => {
       await page.goto(`${built!.baseUrl}${CLASS_ROUTE}`, {
         waitUntil: "networkidle",
@@ -554,6 +1014,108 @@ async function main(): Promise<void> {
       });
       await heading.waitFor({ state: "visible" });
       return { url: page.url(), filtered, heading: await heading.textContent() };
+    });
+
+    await test("docs search reaches every indexed symbol kind", async (page) => {
+      const searchTable = docafBuilt!.snapshot.tables.search as {
+        name: string;
+        kind: string;
+        summary?: string;
+      }[];
+      assert.equal(
+        searchTable.length,
+        expectedSearchEntries(docafBuilt!.snapshot),
+        `docaf snapshot search table had ${searchTable.length} entries, expected ${expectedSearchEntries(
+          docafBuilt!.snapshot
+        )}`
+      );
+      const typedef = searchTable.find((entry) => entry.kind === "typedef");
+      assert.ok(typedef, "docaf snapshot has no typedef search entries");
+      const probes = [...INDEXED_SYMBOL_PROBES, [typedef!.name, "typedef"]];
+      await page.goto(`${docafBuilt!.baseUrl}/`, {
+        waitUntil: "networkidle",
+      });
+      const input = page.locator(".docs-search-input").first();
+      await input.waitFor({ state: "visible" });
+      const results = page.locator(".docs-search-results li");
+      const observed: Record<string, string[]> = {};
+      for (const [term, kind] of probes) {
+        await input.fill(term);
+        await page
+          .locator(".docs-search-results li", { hasText: term })
+          .first()
+          .waitFor({ state: "visible", timeout: 5000 });
+        const rendered = await results.allInnerTexts();
+        assert.ok(
+          rendered.some((text: string) => text.includes(term)),
+          `${kind} probe "${term}" returned no matching result: ${rendered.join(
+            " | "
+          )}`
+        );
+        assert.equal(
+          await page.locator(".docs-search-empty").count(),
+          0,
+          `${kind} probe "${term}" rendered "No matches"`
+        );
+        observed[term] = rendered;
+      }
+      return {
+        indexedEntries: searchTable.length,
+        typedef: typedef!.name,
+        probes: Object.keys(observed),
+      };
+    });
+
+    await test("docs search caps results per query", async (page) => {
+      const searchTable = docafBuilt!.snapshot.tables.search as {
+        name: string;
+        summary?: string;
+      }[];
+      const broad = "a";
+      const matching = searchTable.filter(
+        (entry) =>
+          entry.name.toLowerCase().includes(broad) ||
+          (entry.summary ?? "").toLowerCase().includes(broad)
+      ).length;
+      assert.ok(
+        matching > 20,
+        `broad term "${broad}" only matched ${matching} snapshot entries`
+      );
+      await page.goto(`${docafBuilt!.baseUrl}/`, {
+        waitUntil: "networkidle",
+      });
+      const input = page.locator(".docs-search-input").first();
+      await input.waitFor({ state: "visible" });
+      await input.fill(broad);
+      const results = page.locator(".docs-search-results li");
+      await results.first().waitFor({ state: "visible", timeout: 5000 });
+      await page.waitForFunction(
+        (term) => {
+          const items = Array.from(
+            document.querySelectorAll(".docs-search-results li")
+          );
+          return (
+            items.length > 0 &&
+            items.length <= 20 &&
+            items.every((item) =>
+              (item.textContent ?? "").toLowerCase().includes(term)
+            )
+          );
+        },
+        broad,
+        { timeout: 5000 }
+      );
+      const rendered = await results.count();
+      assert.ok(
+        rendered > 0 && rendered <= 20,
+        `broad term "${broad}" rendered ${rendered} results, expected 1..20 from ${matching} matches`
+      );
+      assert.equal(
+        await page.locator(".docs-search-empty").count(),
+        0,
+        `broad term "${broad}" rendered "No matches"`
+      );
+      return { term: broad, matching, rendered };
     });
 
     await test("component preview controls update the component and events are observed", async (page) => {
@@ -676,26 +1238,13 @@ async function main(): Promise<void> {
       return outcome;
     });
 
-    await test("component page renders a visible Source section naming widget.component.ts", async (page) => {
-      await page.goto(`${built!.baseUrl}${COMPONENT_ROUTE}`, {
-        waitUntil: "networkidle",
-      });
-      const source = page
-        .locator(".docs-section")
-        .filter({
-          has: page.getByRole("heading", { name: "Source", exact: true }),
-        })
-        .first();
-      await source.waitFor({ state: "visible", timeout: 5000 });
-      const text = (await source.innerText()).trim();
-      assert.ok(
-        text.includes("widget.component.ts"),
-        `Source section did not identify widget.component.ts; observed: ${JSON.stringify(
-          text
-        )}`
-      );
-      return { source: text };
-    });
+    await test("component page renders a dedicated docs-source block naming widget.component.ts", (page) =>
+      assertDedicatedSourceBlock(
+        page,
+        `${built!.baseUrl}${COMPONENT_ROUTE}`,
+        "widget.component.ts"
+      )
+    );
 
     await test("component page including preview has no serious or critical axe violations", async (page) => {
       await page.goto(`${built!.baseUrl}${COMPONENT_ROUTE}`, {
@@ -768,8 +1317,19 @@ async function main(): Promise<void> {
   const failed = results.filter((result) => !result.ok);
   const summary = {
     url: built!.baseUrl,
+    overflowRegressionUrl: overflowBuilt!.baseUrl,
     nativePreviewUrl: nativeBuilt!.baseUrl,
-    buildOutputs: [built.output, nativeBuilt.output],
+    docafDocsUrl: docafBuilt!.baseUrl,
+    fileModeUrl: pathToFileURL(
+      path.join(fileBuilt!.output, "index.html")
+    ).href,
+    buildOutputs: [
+      built.output,
+      overflowBuilt.output,
+      nativeBuilt.output,
+      fileBuilt.output,
+      docafBuilt.output,
+    ],
     passed: results.length - failed.length,
     failed: failed.length,
     results,
@@ -779,11 +1339,11 @@ async function main(): Promise<void> {
     JSON.stringify(summary, null, 2),
     "utf8"
   );
-  console.log(JSON.stringify(summary, null, 2));
+  log.info(JSON.stringify(summary, null, 2));
   if (failed.length) process.exitCode = 1;
 }
 
 main().catch((error) => {
-  console.error(error);
+  log.error(error);
   process.exitCode = 1;
 });

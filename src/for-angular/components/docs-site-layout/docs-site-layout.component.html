@@ -1,0 +1,14 @@
+<a class="docs-skip-link" href="#docs-main-content">Skip to content</a>
+<div class="docs-site-layout">
+  @if (headerBlock) {
+    <ngx-decaf-component-renderer [tag]="headerBlock.tag" [globals]="headerBlock"></ngx-decaf-component-renderer>
+  }
+  <main id="docs-main-content" class="docs-site-main">
+    @if (bodyBlock) {
+      <ngx-decaf-component-renderer [tag]="bodyBlock.tag" [globals]="bodyBlock"></ngx-decaf-component-renderer>
+    }
+  </main>
+  @if (footerBlock) {
+    <ngx-decaf-component-renderer [tag]="footerBlock.tag" [globals]="footerBlock"></ngx-decaf-component-renderer>
+  }
+</div>

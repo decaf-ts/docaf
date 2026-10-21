@@ -104,6 +104,7 @@ function toJsonValue(value: unknown, path: string): unknown {
  * @param {Class.<M>} model - Model class whose constructor accepts the record shape.
  * @param {string[]} fields - Field names carried between model and record.
  * @returns {DocsModelCodec<M, D>} A codec encoding only the given fields and decoding into `M`.
+ * @memberOf module:docaf
  */
 export function docsModelCodec<M extends DocsModel, D extends DocsRecordBase>(
   model: new (arg?: any) => M,

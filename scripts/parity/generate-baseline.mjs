@@ -30,6 +30,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { Logging } from "@decaf-ts/logging";
+
 import {
   BASELINE_COMMIT,
   BASELINE_REPOSITORY,
@@ -42,6 +44,8 @@ const ROOT = path.resolve(SCRIPT_DIR, "../..");
 const requireFromRoot = createRequire(path.join(ROOT, "package.json"));
 const ts = requireFromRoot("typescript");
 
+const log = Logging.for("docaf parity baseline");
+
 const BASELINE_ROOT =
   process.env.BETTER_DOCS_BASELINE_ROOT ?? "/tmp/better-docs";
 const MANIFEST = JSON.parse(
@@ -52,7 +56,7 @@ const OUTPUT = path.join(ROOT, "tests/fixtures/parity/baseline.json");
 
 
 function fail(message) {
-  console.error(`parity baseline: ${message}`);
+  log.error(`parity baseline: ${message}`);
   process.exit(1);
 }
 
@@ -174,7 +178,7 @@ function main() {
       sha256: createHash("sha256").update(source).digest("hex"),
       statements,
     });
-    console.log(
+    log.info(
       `parity baseline: ${fixture}: ${statements.length} statements, ` +
         `${statements.reduce((total, entry) => total + entry.blocks.length, 0)} blocks`
     );
@@ -203,7 +207,7 @@ function main() {
 
   fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
   fs.writeFileSync(OUTPUT, `${JSON.stringify(document, null, 2)}\n`, "utf8");
-  console.log(
+  log.info(
     `parity baseline: wrote ${path.relative(ROOT, OUTPUT)} ` +
       `(${fixtures.length} fixtures, ${blockCount} blocks)`
   );

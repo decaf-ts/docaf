@@ -1,0 +1,15 @@
+<article class="docs-page docs-home-page">
+  @if (symbolBlock) {
+    <div class="docs-home-hero">
+      <ngx-decaf-component-renderer [tag]="symbolBlock.tag" [globals]="symbolBlock"></ngx-decaf-component-renderer>
+    </div>
+  }
+  @if (sectionsBlock) {
+    <div class="docs-home-sections">
+      <ngx-decaf-component-renderer [tag]="sectionsBlock.tag" [globals]="sectionsBlock"></ngx-decaf-component-renderer>
+    </div>
+  }
+  @for (block of extraBlocks; track $index) {
+    <ngx-decaf-component-renderer [tag]="block.tag" [globals]="block"></ngx-decaf-component-renderer>
+  }
+</article>

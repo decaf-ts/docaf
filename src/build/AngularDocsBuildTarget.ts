@@ -77,10 +77,32 @@ function isInside(root: string, candidate: string): boolean {
  * @summary Allows tuning the Angular CLI build configuration (production or development),
  * overriding the root of the docaf package used to locate assets and generated sources, and
  * setting the timeout applied to spawned build processes.
+ * @interface AngularDocsBuildTargetOptions
+ * @memberOf module:docaf.build
  */
 export interface AngularDocsBuildTargetOptions {
+  /**
+   * Angular CLI build configuration to invoke.
+   *
+   * Passed through to the spawned `ng build`; `"production"` (default) enables
+   * optimizations and hashed bundles, `"development"` builds faster with source maps.
+   */
   configuration?: "production" | "development";
+
+  /**
+   * Root of the installed `@decaf-ts/docaf` package.
+   *
+   * Used to locate bundled runtime assets and the for-angular toolchain. Defaults to
+   * the package root resolved from the current working directory (or `DOCAF_PACKAGE_ROOT`).
+   */
   packageRoot?: string;
+
+  /**
+   * Timeout applied to spawned `npm`/`ng` processes, in milliseconds.
+   *
+   * Defaults to 15 minutes; the build fails with a {@link DocsBuildError} when a
+   * spawned process exceeds it.
+   */
   installTimeoutMs?: number;
 }
 
@@ -98,6 +120,8 @@ export interface AngularDocsBuildTargetOptions {
  * the produced `dist/browser` output back into the output directory, removing any stale files
  * except the app scaffold. Errors are reported as {@link DocsBuildError} diagnostics.
  * @class AngularDocsBuildTarget
+ * @param {AngularDocsBuildTargetOptions} [options] Overrides for the build configuration,
+ * package root, and spawned-process timeout.
  * @example
  * ```ts
  * const target = new AngularDocsBuildTarget({ configuration: "production" });
@@ -122,11 +146,37 @@ export class AngularDocsBuildTarget implements DocsBuildTarget {
     this.installTimeoutMs = options.installTimeoutMs ?? 15 * 60 * 1000;
   }
 
+  /**
+   * Validates that the environment can build the Angular docs application.
+   *
+   * Checks that every package in the target's required set (Angular, Ionic, and
+   * `@decaf-ts/for-angular`) is resolvable from the project root, falling back to the docaf
+   * package root, and rejects contexts that request cross-framework previews, which this
+   * target does not support.
+   * @param {DocsBuildContext} context - The build context to validate against.
+   * @returns {Promise<void>} Resolves when the environment and preview configuration are supported.
+   * @throws {DocsBuildError} When a required dependency cannot be resolved or cross-framework
+   * previews are enabled.
+   */
   async validate(context: DocsBuildContext): Promise<void> {
     await this.validateDependencies(context);
     await this.validatePreviews(context);
   }
 
+  /**
+   * Reads the snapshot and scaffolds the throwaway Angular application.
+   *
+   * Copies the docs snapshot into the app's public assets, emits both the
+   * `snapshot.json` file and the `snapshot.js`/`en.js` data scripts used by the file-protocol
+   * runtime, writes the app scaffold (angular.json, tsconfig, main.ts, root component, app
+   * config, routes, index.html, styles, preview registry with synthetic preview components),
+   * copies i18n assets, and links `node_modules` into the scaffold when the project layout
+   * allows it. The scaffold lives under `<output>/.docaf-angular-app`.
+   * @param {DocsBuildContext} context - The build context to prepare from.
+   * @returns {Promise<void>} Resolves when the scaffold is ready for `build`.
+   * @throws {DocsBuildError} When the snapshot is missing or invalid, or scaffold files
+   * cannot be written.
+   */
   async prepare(context: DocsBuildContext): Promise<void> {
     this.snapshot = await this.readSnapshot(context);
     const appDir = path.join(context.outputDirectory, APP_DIRECTORY);
@@ -145,6 +195,11 @@ export class AngularDocsBuildTarget implements DocsBuildTarget {
       context.snapshotPath,
       path.join(appDir, "public", "assets", "docs", "snapshot.json")
     );
+    await this.writeDataScript(
+      path.join(appDir, "public", "assets", "docs", "snapshot.js"),
+      "__DOCAF_DOCS_SNAPSHOT__",
+      this.snapshot
+    );
     const requireFromProject = createRequire(
       path.join(context.projectRoot, "package.json")
     );
@@ -162,6 +217,18 @@ export class AngularDocsBuildTarget implements DocsBuildTarget {
       path.join(forAngularRoot, "assets", "i18n", "en.json"),
       path.join(appDir, "public", "assets", "i18n", "en.json")
     );
+    await this.writeDataScript(
+      path.join(appDir, "public", "assets", "i18n", "en.js"),
+      "__DOCAF_DOCS_I18N__",
+      {
+        en: JSON.parse(
+          await fs.readFile(
+            path.join(forAngularRoot, "assets", "i18n", "en.json"),
+            "utf8"
+          )
+        ),
+      }
+    );
 
     await this.writeProjectFiles(context, appDir, srcDir, appSourceDir);
     await this.writePreviewModules(
@@ -172,6 +239,22 @@ export class AngularDocsBuildTarget implements DocsBuildTarget {
     await this.ensureDependencies(appDir);
   }
 
+  /**
+   * Builds the scaffolded Angular application and publishes the browser output.
+   *
+   * Spawns the resolved `ng build` with the configured build configuration inside the
+   * scaffold, then applies the file-protocol-safe post-processing: rebundles the runtime chunks
+   * as classic (non-module) scripts, converts the snapshot/i18n payloads into plain data
+   * scripts, injects the history-shim needed for hash routing under `file://`, and rewrites the
+   * static `index.html` (relative base href, classic script tags, no module preload hints).
+   * Finally the produced `dist/browser` output is copied into `context.outputDirectory`, and
+   * the collected warnings are returned with the result.
+   * @param {DocsBuildContext} context - The build context to build with.
+   * @returns {Promise<DocsBuildResult>} The generated files, duration, and warnings; the
+   * `outputDirectory` is the context's, not the scaffold's.
+   * @throws {DocsBuildError} When the Angular build fails, exceeds the configured timeout, or
+   * the produced output cannot be copied.
+   */
   async build(context: DocsBuildContext): Promise<DocsBuildResult> {
     const started = Date.now();
     const appDir = path.join(context.outputDirectory, APP_DIRECTORY);
@@ -179,6 +262,9 @@ export class AngularDocsBuildTarget implements DocsBuildTarget {
     const ngBin = this.resolveNgBinary();
     const warnings: string[] = [];
     await this.run(ngBin, ["build", "--configuration", this.configuration], appDir, warnings);
+
+    await this.bundleClassicScripts(distDir);
+    await this.rewriteStaticIndex(context, distDir);
 
     const files = await this.copyDist(distDir, context.outputDirectory);
     return {
@@ -296,7 +382,7 @@ export class AngularDocsBuildTarget implements DocsBuildTarget {
     const snapshot = await this.readSnapshot(context);
     const projectName =
       snapshot.project.name || context.config.project?.name || "Documentation";
-    const baseHref = context.config.output?.baseHref ?? "/";
+    const baseHref = context.config.output?.baseHref ?? "./";
     const sourceRoot = path.join(this.packageRoot, "src");
     const hasSource = existsSync(path.join(sourceRoot, "index.ts"));
     const libraryRoot = hasSource
@@ -408,11 +494,12 @@ export class AngularDocsBuildTarget implements DocsBuildTarget {
 
     const main = `import "zone.js";
 import { bootstrapApplication } from "@angular/platform-browser";
+import { Logging } from "@decaf-ts/logging";
 import { DocsRootComponent } from "./app/docs-root.component";
 import { appConfig } from "./app/app.config";
 
 bootstrapApplication(DocsRootComponent, appConfig).catch((error) => {
-  console.error(error);
+  Logging.for("decaf docs app").fatal(error);
 });
 `;
     await this.write(path.join(srcDir, "main.ts"), main);
@@ -437,11 +524,26 @@ import {
   withHashLocation,
   withInMemoryScrolling,
 } from "@angular/router";
+import { TranslateLoader } from "@ngx-translate/core";
+import { of } from "rxjs";
 import { provideIonicAngular, IonicRouteStrategy } from "@ionic/angular/standalone";
 import { provideDecafI18nConfig } from "@decaf-ts/for-angular";
-import { DOCS_ANGULAR_PREVIEWS } from "@decaf-ts/docaf/for-angular";
+import {
+  DOCS_ANGULAR_PREVIEWS,
+  DocsAngularRuntime,
+} from "@decaf-ts/docaf/for-angular";
 import { routes } from "./app.routes";
 import { DOCS_PREVIEWS } from "./preview-registry";
+
+function fileSnapshot(): any {
+  if (typeof location === "undefined" || location.protocol !== "file:")
+    return undefined;
+  return (globalThis as any).__DOCAF_DOCS_SNAPSHOT__;
+}
+
+function translations(): Record<string, any> {
+  return ((globalThis as any).__DOCAF_DOCS_I18N__ ?? {}) as Record<string, any>;
+}
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -453,13 +555,20 @@ export const appConfig: ApplicationConfig = {
       withHashLocation(),
       withInMemoryScrolling({ anchorScrolling: "enabled" })
     ),
-    provideDecafI18nConfig(
-      { fallbackLang: "en", lang: "en" },
-      [{ prefix: "./assets/i18n/", suffix: ".json" }],
-      false,
-      false
-    ),
+    provideDecafI18nConfig({ fallbackLang: "en", lang: "en" }, [], false, false),
+    {
+      provide: TranslateLoader,
+      useFactory: () => ({
+        getTranslation: (lang: string) =>
+          of((translations()[lang] ?? translations()["en"] ?? {}) as object),
+      }),
+    },
     { provide: DOCS_ANGULAR_PREVIEWS, useValue: DOCS_PREVIEWS },
+    {
+      provide: DocsAngularRuntime,
+      useFactory: () =>
+        new DocsAngularRuntime(DOCS_PREVIEWS as any, fileSnapshot()),
+    },
   ],
 };
 `;
@@ -672,7 +781,7 @@ export const routes: Routes = [
       "  standalone: true,",
       "  template: `",
       `    <div class="docs-synthetic-preview">`,
-      `      <p class="docs-synthetic-title">${escapeHtml(componentName)}</p>`,
+      `      <p class="docs-synthetic-title">${JSON.stringify(componentName)}</p>`,
       ...properties.map(
         (property) =>
           `      <p class="docs-synthetic-property"><span>${escapeHtml(
@@ -802,6 +911,163 @@ export const routes: Routes = [
         );
       });
     });
+  }
+
+  private async bundleClassicScripts(distDir: string): Promise<void> {
+    const entries = await fs.readdir(distDir);
+    const polyfills = entries.find((entry) =>
+      /^polyfills(?:-[^.]+)?\.js$/.test(entry)
+    );
+    const main = entries.find((entry) => /^main(?:-[^.]+)?\.js$/.test(entry));
+    if (!main) {
+      throw new DocsBuildError([
+        {
+          severity: "error",
+          code: "DOCS_ANGULAR_OUTPUT_MISSING",
+          message: `Angular build finished without producing a main bundle in ${distDir}.`,
+        },
+      ]);
+    }
+    const entryFile = path.join(distDir, ".docaf-classic-entry.js");
+    const bundleFile = path.join(distDir, ".docaf-main.bundle.js");
+    await this.write(
+      entryFile,
+      `${[...(polyfills ? [polyfills] : []), main]
+        .map((file) => `import "./${file}";`)
+        .join("\n")}\n`
+    );
+    try {
+      const esbuild = this.resolveEsbuild();
+      await esbuild.build({
+        entryPoints: [entryFile],
+        bundle: true,
+        format: "iife",
+        platform: "browser",
+        target: ["es2022"],
+        outfile: bundleFile,
+        allowOverwrite: true,
+        ignoreAnnotations: true,
+        minify: true,
+        legalComments: "none",
+        logLevel: "silent",
+      });
+    } catch (error) {
+      throw new DocsBuildError([
+        {
+          severity: "error",
+          code: "DOCS_ANGULAR_BUNDLE_FAILED",
+          message: `Failed to bundle the Angular application into a file:// compatible classic script: ${
+            (error as Error).message
+          }`,
+        },
+      ]);
+    } finally {
+      await fs.rm(entryFile, { force: true });
+    }
+    for (const entry of entries) {
+      if (
+        /^(?:chunk-.*|main(?:-[^.]+)?|polyfills(?:-[^.]+)?)\.js(?:\.map)?$/.test(
+          entry
+        )
+      ) {
+        await fs.rm(path.join(distDir, entry), { force: true });
+      }
+    }
+    await fs.rename(bundleFile, path.join(distDir, "main.js"));
+  }
+
+  private async rewriteStaticIndex(
+    context: DocsBuildContext,
+    distDir: string
+  ): Promise<void> {
+    const indexPath = path.join(distDir, "index.html");
+    const baseHref = context.config.output?.baseHref ?? "./";
+    let html = await fs.readFile(indexPath, "utf8");
+    html = html.replace(/<link rel="modulepreload"[^>]*>\s*/g, "");
+    html = html.replace(
+      /<script src="(?:main|polyfills)(?:-[^"]*)?\.js" type="module"><\/script>\s*/g,
+      ""
+    );
+    html = html.replace(
+      /<base href="[^"]*"\s*\/?>/i,
+      `<base href="${escapeHtml(baseHref)}">`
+    );
+    await this.write(
+      path.join(distDir, "file-protocol-shim.js"),
+      this.fileProtocolShim()
+    );
+    if (!html.includes('src="main.js"')) {
+      const bootstrap = [
+        '<script src="assets/docs/snapshot.js"></script>',
+        '<script src="assets/i18n/en.js"></script>',
+        '<script src="file-protocol-shim.js"></script>',
+        '<script src="main.js"></script>',
+      ].join("\n    ");
+      html = html.replace(/\s*<\/body>/i, `\n    ${bootstrap}\n  </body>`);
+    }
+    await this.write(indexPath, html);
+  }
+
+  private fileProtocolShim(): string {
+    return `(function () {
+  if (location.protocol !== "file:") return;
+  function applyHash(url) {
+    var value = String(url == null ? "" : url);
+    var index = value.indexOf("#");
+    if (index < 0) return;
+    var hash = value.slice(index);
+    if (location.hash === hash) return;
+    location.hash = hash;
+  }
+  var pushState = history.pushState;
+  var replaceState = history.replaceState;
+  history.pushState = function (state, title, url) {
+    if (url === undefined) return pushState.call(history, state, title);
+    try {
+      return pushState.call(history, state, title, url);
+    } catch (error) {
+      applyHash(url);
+    }
+  };
+  history.replaceState = function (state, title, url) {
+    if (url === undefined) return replaceState.call(history, state, title);
+    try {
+      return replaceState.call(history, state, title, url);
+    } catch (error) {
+      applyHash(url);
+    }
+  };
+})();
+`;
+  }
+
+  private resolveEsbuild(): {
+    build(options: Record<string, unknown>): Promise<unknown>;
+  } {
+    const requireFromPackage = createRequire(
+      path.join(this.packageRoot, "package.json")
+    );
+    try {
+      const angularBuild = requireFromPackage.resolve(
+        "@angular/build/package.json"
+      );
+      return createRequire(angularBuild)("esbuild");
+    } catch {
+      return requireFromPackage("esbuild");
+    }
+  }
+
+  private async writeDataScript(
+    file: string,
+    globalName: string,
+    value: unknown
+  ): Promise<void> {
+    await this.write(
+      file,
+      `globalThis.${globalName} = JSON.parse(${JSON.stringify(
+        JSON.stringify(value ?? null)
+      )});\n`
+    );
   }
 
   private async copyDist(

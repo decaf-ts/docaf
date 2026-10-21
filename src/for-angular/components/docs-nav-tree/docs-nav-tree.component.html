@@ -1,0 +1,14 @@
+<ul class="docs-nav" role="tree">
+  @for (item of treeItems; track item.uid) {
+    <li class="docs-nav-item" role="treeitem">
+      @if (item.route) {
+        <a [routerLink]="item.route" [fragment]="item.anchor">{{ item.label }}</a>
+      } @else {
+        <span class="docs-nav-group">{{ item.label }}</span>
+      }
+      @if (item.children?.length) {
+        <docs-nav-tree [items]="item.children"></docs-nav-tree>
+      }
+    </li>
+  }
+</ul>

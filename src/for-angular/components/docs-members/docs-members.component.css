@@ -1,0 +1,70 @@
+.docs-members {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  margin: 1rem 0;
+  min-width: 0;
+}
+.docs-member-group {
+  min-width: 0;
+}
+.docs-member-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+.docs-member-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--docs-surface, #f7f8fa);
+  border: 1px solid var(--docs-border, #d7dbe0);
+  color: var(--docs-muted, #5f6b7a);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.docs-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.docs-member-table td {
+  vertical-align: top;
+  font-size: 0.88rem;
+}
+.docs-member-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.docs-member-name a {
+  text-decoration: none;
+}
+.docs-member-kind {
+  margin-inline-start: 0.4rem;
+  color: var(--docs-muted, #5f6b7a);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+.docs-badge {
+  margin-inline-start: 0.35rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #1f5fbf;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+.docs-member-signature code {
+  color: #38475a;
+  font-size: 0.82rem;
+}
+.docs-member-description {
+  color: var(--docs-muted, #5f6b7a);
+  font-size: 0.86rem;
+}

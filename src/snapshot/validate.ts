@@ -220,6 +220,7 @@ function assertReferences(
  * @returns {void} Nothing; pass/fail is expressed by throwing or asserting the type.
  * @throws {DocsSnapshotValidationError} On any shape, JSON-safety, duplicate-key, or
  * unresolved-reference violation, with a message naming the offending path.
+ * @memberOf module:docaf
  */
 export function validateDocsSnapshot(
   snapshot: unknown

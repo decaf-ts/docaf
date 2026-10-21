@@ -61,8 +61,12 @@ function relativeFile(
 }
 
 /**
- * Production emitter: every extracted fact becomes a Decaf model that is
+ * @description Production emitter: every extracted fact becomes a Decaf model that is
  * persisted through repositories by the pipeline's store.
+ * @summary Implements {@link DocletEmitter}: declarations convert to `DocletModel` records
+ * with their tags, examples, parameters, signatures, sources and references; class members
+ * nest under their owner, and component extractions emit the component/property/event models.
+ * @class DecafModelWriter
  */
 export class DecafModelWriter implements DocletEmitter {
   constructor(
@@ -160,7 +164,9 @@ export class DecafModelWriter implements DocletEmitter {
           : member.kind
         : declaration.kind,
       package: this.packageName,
-      memberof: isMember ? declaration.longname : undefined,
+      memberof: isMember
+        ? declaration.longname
+        : memberOfLongname(declaration.tags),
       memberofUid: isMember ? owner?.uid : undefined,
       scope: isMember
         ? member.static
@@ -208,9 +214,7 @@ export class DecafModelWriter implements DocletEmitter {
 
     const includesSignature =
       (!isMember &&
-        ["class", "function", "typedef", "module"].includes(
-          declaration.kind
-        )) ||
+        ["class", "function", "typedef"].includes(declaration.kind)) ||
       (isMember && ["function", "constructor"].includes(member.kind));
     if (includesSignature) {
       const signature = this.emitSignature(
@@ -544,4 +548,25 @@ export class DecafModelWriter implements DocletEmitter {
 
 function symbolPath(declaration: ConvertedDeclaration): string {
   return declaration.name;
+}
+
+/**
+ * @description Resolves the `@memberOf` tag of a top-level declaration into its owner
+ * longname.
+ * @summary The tag value is kept verbatim (including the JSDoc `module:`
+ * prefix) so it matches the longname of the container doclet emitted for the
+ * referenced `@module`/`@namespace` declaration.
+ * @function memberOfLongname
+ * @param {ConvertedTag[]} tags - The converted tags of the declaration.
+ * @returns {string | undefined} The verbatim owner longname, or undefined when absent.
+ * @memberOf module:docaf
+ */
+function memberOfLongname(
+  tags: readonly ConvertedTag[]
+): string | undefined {
+  const tag = tags.find(
+    (candidate) => candidate.title.toLowerCase() === "memberof"
+  );
+  const value = tag?.value?.trim();
+  return value || undefined;
 }

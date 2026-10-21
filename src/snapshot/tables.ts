@@ -122,6 +122,7 @@ export const DocsTableNames: readonly DocsTableName[] = DocsTables.map(
  * @param {DocsTableName} name - Table name to resolve (a key of {@link DocsSnapshotTables}).
  * @returns {DocsTableDefinition} The definition registered for that table name.
  * @throws {InternalError} When no table with the given name is registered.
+ * @memberOf module:docaf
  */
 export function docsTable(name: DocsTableName): DocsTableDefinition {
   const table = DocsTables.find((entry) => entry.name === name);

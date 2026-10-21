@@ -21,6 +21,7 @@ export interface DocsFetchResponse {
  * global `fetch` (or with custom transport/auth needs) to supply their own loader.
  * @param {string} url - Absolute or relative URL of the docs snapshot to load.
  * @returns {Promise<DocsFetchResponse>} Response exposing `ok`, `status`, and `json()`.
+ * @memberOf module:docaf
  */
 export type DocsFetch = (url: string) => Promise<DocsFetchResponse>;
 

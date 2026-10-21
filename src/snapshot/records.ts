@@ -479,6 +479,7 @@ export interface DocsSnapshotTables {
  * @summary One literal per table (e.g. `"doclets"`, `"componentProperties"`, `"manifests"`);
  * used to address tables when exporting, hydrating, or looking up definitions via
  * {@link docsTable}.
+ * @memberOf module:docaf
  */
 export type DocsTableName = keyof DocsSnapshotTables;
 
@@ -488,6 +489,7 @@ export type DocsTableName = keyof DocsSnapshotTables;
  * fixed to `1`, `project` names the documented project and version, `build` carries the build id
  * and source revision, and `tables` holds every record collection. The version literal allows
  * future formats to be introduced without breaking existing consumers.
+ * @memberOf module:docaf
  */
 export interface DocsSnapshotV1 {
   schemaVersion: 1;
@@ -506,5 +508,6 @@ export interface DocsSnapshotV1 {
  * @description Alias for the current docs snapshot format ({@link DocsSnapshotV1}).
  * @summary Lets consumers refer to "the" snapshot type without hard-coding the version; when a new
  * schema version is added, this alias can be updated or turned into a union.
+ * @memberOf module:docaf
  */
 export type DocsSnapshot = DocsSnapshotV1;

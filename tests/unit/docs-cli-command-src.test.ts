@@ -30,6 +30,29 @@ const TSCONFIG = JSON.stringify(
   2
 );
 
+const SOURCE_OPTIONS = [
+  "--tsconfig",
+  "--include",
+  "--exclude",
+  "--project-name",
+  "--project-version",
+  "--include-private",
+  "--snapshot-dir",
+  "--snapshot-file",
+  "--plugins",
+  "--extractors",
+  "--theme",
+  "--layout",
+];
+
+const TARGET_OPTIONS = [
+  "--renderer",
+  "--output",
+  "--base-href",
+  "--configuration",
+  "--routing",
+];
+
 function docsProject(prefix: string): string {
   const root = makeTempDir(prefix);
   copyFixture("vertical-slice/src", path.join(root, "src"));
@@ -40,6 +63,12 @@ function docsProject(prefix: string): string {
     JSON.stringify({ name: "command-fixture", version: "0.4.0" })
   );
   return root;
+}
+
+function configFilesIn(root: string): string[] {
+  return fs
+    .readdirSync(root)
+    .filter((entry) => entry.startsWith("decafdocs.config."));
 }
 
 async function runIn<T>(
@@ -95,27 +124,38 @@ describe("docs command shape", () => {
     ]);
   });
 
-  it("exposes the documented options and descriptions", () => {
+  it("exposes the documented arguments-only options", () => {
     const build = createBuildCommand();
     const snapshot = createSnapshotCommand();
     const init = createInitCommand();
 
     expect(build.name()).toBe("build");
     expect(build.options.map((option) => option.long)).toEqual([
-      "--config",
-      "--renderer",
+      ...SOURCE_OPTIONS,
+      ...TARGET_OPTIONS,
       "--targets",
     ]);
-    expect(snapshot.options.map((option) => option.long)).toEqual(["--config"]);
-    expect(init.options.map((option) => option.long)).toEqual(["--config"]);
+    expect(snapshot.options.map((option) => option.long)).toEqual([
+      ...SOURCE_OPTIONS,
+      ...TARGET_OPTIONS,
+    ]);
+    expect(init.options.map((option) => option.long)).toEqual([
+      ...SOURCE_OPTIONS,
+      ...TARGET_OPTIONS,
+    ]);
     expect(build.description()).toContain("renderer targets");
     expect(snapshot.description()).toContain("target-independent snapshot");
-    expect(init.description()).toContain("default decafdocs.config.ts");
+    expect(init.description()).toContain("no config file");
+    expect(
+      [...build.options, ...snapshot.options, ...init.options].map(
+        (option) => option.long
+      )
+    ).not.toContain("--config");
   });
 });
 
 describe("docs snapshot command", () => {
-  it("runs the orchestrator and prints the operation summary", async () => {
+  it("runs the orchestrator from arguments only and prints the summary", async () => {
     const root = docsProject("docaf-command-snapshot-");
 
     const { logged, errors } = await runIn(root, () =>
@@ -131,6 +171,7 @@ describe("docs snapshot command", () => {
     expect(fs.existsSync(path.join(root, ".decaf-docs", "snapshot.json"))).toBe(
       true
     );
+    expect(configFilesIn(root)).toEqual([]);
   });
 
   it("reports failures as diagnostics and sets exit code 1", async () => {
@@ -146,41 +187,132 @@ describe("docs snapshot command", () => {
     expect(errors.join("\n")).toContain("decaf docs failed:");
     expect(errors.join("\n")).toContain("DOCAF_CONFIG_TSCONFIG_MISSING");
   });
-
 });
 
 describe("docs init command", () => {
-  it("writes a default config at the requested path", async () => {
-    const root = makeTempDir("docaf-command-init-");
-    const target = path.join(root, "custom", "decafdocs.config.ts");
+  it("prepares the snapshot directory and writes no config file", async () => {
+    const root = docsProject("docaf-command-init-");
+
+    const { logged, errors } = await runIn(root, () =>
+      createDocsCommand().parseAsync(["node", "docs", "init"], {
+        from: "node",
+      })
+    );
+
+    expect(process.exitCode).toBeUndefined();
+    expect(errors).toEqual([]);
+    expect(logged.join("\n")).toContain("docs workspace ready:");
+    expect(logged.join("\n")).toContain("source: 3 file(s) via");
+    expect(logged.join("\n")).toContain(
+      `snapshot: ${path.join(root, ".decaf-docs", "snapshot.json")}`
+    );
+    expect(logged.join("\n")).toContain("next: decaf docs build");
+    expect(configFilesIn(root)).toEqual([]);
+    expect(fs.existsSync(path.join(root, ".decaf-docs"))).toBe(true);
+  });
+
+  it("uses explicit argument paths for validation and snapshot preparation", async () => {
+    const root = docsProject("docaf-command-init-args-");
+    writeFile(
+      root,
+      "tsconfig.docs.json",
+      TSCONFIG.replace('"src/**/*.ts"', '"src/**/*.ts", "generated/**/*.ts"')
+    );
 
     const { logged, errors } = await runIn(root, () =>
       createDocsCommand().parseAsync(
-        ["node", "docs", "init", "--config", target],
+        [
+          "node",
+          "docs",
+          "init",
+          "--tsconfig",
+          "./tsconfig.docs.json",
+          "--include",
+          "src/**/*.ts",
+          "--snapshot-dir",
+          "./custom-snapshots",
+          "--snapshot-file",
+          "docs.json",
+          "--project-name",
+          "argument-project",
+          "--base-href",
+          "/docs/",
+          "--layout",
+          "page:DocPageLayout",
+        ],
         { from: "node" }
       )
     );
 
     expect(process.exitCode).toBeUndefined();
     expect(errors).toEqual([]);
-    expect(logged[0]).toBe(`created ${target}`);
-    expect(logged[1]).toContain('run "decaf docs build"');
-    expect(fs.existsSync(target)).toBe(true);
+    expect(logged.join("\n")).toContain(
+      `snapshot: ${path.join(root, "custom-snapshots", "docs.json")}`
+    );
+    expect(logged.join("\n")).toContain("--base-href /docs/");
+    expect(logged.join("\n")).toContain("--layout");
+    expect(fs.existsSync(path.join(root, "custom-snapshots"))).toBe(true);
+    expect(configFilesIn(root)).toEqual([]);
   });
 
-  it("reports an existing config and sets exit code 1", async () => {
-    const root = makeTempDir("docaf-command-init-exists-");
-    const target = path.join(root, "decafdocs.config.ts");
-    writeFile(root, "decafdocs.config.ts", "export default {};\n");
+  it("passes --layout through as a compatibility warning", async () => {
+    const root = docsProject("docaf-command-init-layout-");
 
-    const { errors } = await runIn(root, () =>
+    const { logged, errors } = await runIn(root, () =>
       createDocsCommand().parseAsync(
-        ["node", "docs", "init", "--config", target],
+        [
+          "node",
+          "docs",
+          "init",
+          "--layout",
+          "page:DocPageLayout",
+          "tutorial:TutorialLayout",
+        ],
         { from: "node" }
       )
     );
 
+    expect(process.exitCode).toBeUndefined();
+    expect(errors).toEqual([]);
+    expect(logged.join("\n")).toContain("--layout");
+  });
+
+  it("ignores a planted config file", async () => {
+    const root = docsProject("docaf-command-init-poisoned-");
+    const marker = path.join(root, "poisoned-config-ran");
+    writeFile(
+      root,
+      "decafdocs.config.mjs",
+      `import fs from "node:fs";\nfs.writeFileSync(${JSON.stringify(
+        marker
+      )}, "ran");\nthrow new Error("poisoned config was imported");\n`
+    );
+
+    const { logged, errors } = await runIn(root, () =>
+      createDocsCommand().parseAsync(["node", "docs", "init"], {
+        from: "node",
+      })
+    );
+
+    expect(process.exitCode).toBeUndefined();
+    expect(errors).toEqual([]);
+    expect(fs.existsSync(marker)).toBe(false);
+    expect(logged.join("\n")).toContain("docs workspace ready:");
+    expect(configFilesIn(root)).toEqual(["decafdocs.config.mjs"]);
+  });
+
+  it("validates the tsconfig before creating the snapshot directory", async () => {
+    const root = makeTempDir("docaf-command-init-validation-");
+
+    const { errors } = await runIn(root, () =>
+      createDocsCommand().parseAsync(["node", "docs", "init"], {
+        from: "node",
+      })
+    );
+
     expect(process.exitCode).toBe(1);
-    expect(errors.join("\n")).toContain("DOCAF_CONFIG_EXISTS");
+    expect(errors.join("\n")).toContain("DOCAF_CONFIG_TSCONFIG_MISSING");
+    expect(fs.existsSync(path.join(root, ".decaf-docs"))).toBe(false);
+    expect(configFilesIn(root)).toEqual([]);
   });
 });

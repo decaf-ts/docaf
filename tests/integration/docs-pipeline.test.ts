@@ -24,6 +24,7 @@ function compilerFor(
     project: PROJECT,
     rootNames: [VERTICAL_SLICE],
     database,
+    snapshot: { id: "pipeline-build", sourceRevision: "local" },
     ...(publisher ? { publisher } : {}),
   });
 }

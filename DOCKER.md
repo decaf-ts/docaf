@@ -124,26 +124,17 @@ directory at `/output`:
 docker run --rm \
   -v "$PWD:/workspace" \
   -v "$PWD/dist:/output" \
-  ghcr.io/decaf-ts/docaf:latest build --config /workspace/decafdocs.config.mjs
+  ghcr.io/decaf-ts/docaf:latest \
+  build --tsconfig /workspace/tsconfig.json --include "src/**/*.ts" \
+  --output /output/docs --base-href ./
 ```
 
-A minimal config for this layout:
-
-```js
-// decafdocs.config.mjs
-export default {
-  project: { name: "my-package", version: "1.0.0" },
-  source: { tsconfig: "./tsconfig.json", include: ["src/**/*.ts"] },
-  targets: [{ renderer: "angular", output: "/output/docs" }],
-};
-```
-
-The project mount must be writable. docaf resolves its snapshot directory under
-the project root (the config root) and writes `.decaf-docs/snapshot.json` and
-`.decaf-docs/build-cache.json` there before any target runs, so a read-only
-mount on `/workspace` fails. To keep generated output out of the source tree,
-point the target output at the separate `/output` mount; the writable project
-mount also lets `.decaf-docs/` persist between runs.
+There is no config file: every setting is a CLI argument (see [CLI.md](./CLI.md)).
+The project mount must be writable. docaf writes `.decaf-docs/snapshot.json` and
+`.decaf-docs/build-cache.json` under the project root before any target runs, so
+a read-only mount on `/workspace` fails. To keep generated output out of the
+source tree, point the target output at the separate `/output` mount; the
+writable project mount also lets `.decaf-docs/` persist between runs.
 
 ## Non-root and mounted-folder permissions
 
@@ -160,7 +151,9 @@ container user. Choose one of these approaches:
     -e HOME=/tmp \
     -v "$PWD:/workspace" \
     -v "$PWD/dist:/output" \
-    ghcr.io/decaf-ts/docaf:latest build
+    ghcr.io/decaf-ts/docaf:latest \
+    build --tsconfig /workspace/tsconfig.json --include "src/**/*.ts" \
+    --output /output/docs --base-href ./
   ```
 
 - Pre-create the output directory and grant group/other write access, or
@@ -203,17 +196,25 @@ The script removes temporary directories, named volumes, and (unless
 
 ## Hosting and Content Security Policy
 
-The Angular target emits a static single-page application plus a data-only
-snapshot. Serve it over HTTPS from a static host or CDN:
+The Angular target emits a static single-page application that works both from a
+static HTTP host and when `index.html` is opened directly from disk (`file://`).
+The emitted app uses hash routing, relative asset URLs, a classic (non-module)
+script bundle, and generated data scripts, so browsers do not need to fetch JSON
+or load ES modules from `file://`. Serve it over HTTPS from a static host or CDN:
 
-- Publish the output directory as-is; `index.html`, hashed JS/CSS assets,
-  `assets/docs/snapshot.json`, and `assets/i18n/*.json` must all be reachable
-  under the configured `baseHref`.
+- Publish the output directory as-is; `index.html`, `main.js`, `styles-*.css`,
+  `file-protocol-shim.js`, `assets/docs/*`, and `assets/i18n/*` must all be
+  reachable under the configured `baseHref`. Use `baseHref: "./"` (the value used
+  by this repository) for direct file open and subpath hosting; `/` only works
+  when the site is served from the domain root.
 - Use hash routing (the default) so deep links do not require server-side
   rewrites. If you switch to path routing, configure a fallback to
   `index.html`.
-- Serve the snapshot and translations as `application/json`, and hashed
-  assets with a long-lived immutable cache. Do not enable directory listing.
+- Over HTTP the runtime fetches the snapshot from `assets/docs/snapshot.json`;
+  under `file://` it reads the generated `assets/docs/snapshot.js` instead.
+  Translations are loaded from the generated `assets/i18n/en.js` in both modes.
+- Serve snapshot JSON and hashed assets with a long-lived immutable cache. Do not
+  enable directory listing.
 
 A restrictive Content Security Policy is recommended. The generated
 `index.html` contains a small inline script that defines

@@ -1,0 +1,61 @@
+@if (component) {
+  <section class="docs-component-metadata">
+    @if (component.selector) {
+      <p class="docs-component-selector">
+        <span>Selector</span>
+        <code>{{ component.selector }}</code>
+      </p>
+    }
+    @if (component.properties.length) {
+      <h3 class="docs-component-subtitle">Inputs</h3>
+      <div class="docs-table-wrap">
+        <table class="docs-table docs-component-table">
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Type</th>
+              <th scope="col">Default</th>
+              <th scope="col">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (property of component.properties; track property.name) {
+              <tr>
+                <td>
+                  <code>{{ property.name }}</code>
+                  @if (property.alias) {
+                    <span class="docs-component-alias">as {{ property.alias }}</span>
+                  }
+                  @if (property.required) {
+                    <span class="docs-badge">required</span>
+                  }
+                </td>
+                <td><code>{{ property.typeText }}</code></td>
+                <td><code>{{ property.defaultValue }}</code></td>
+                <td>{{ property.description }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (component.events.length) {
+      <h3 class="docs-component-subtitle">Outputs</h3>
+      <ul class="docs-component-events">
+        @for (event of component.events; track event.name) {
+          <li>
+            <code>{{ event.name }}</code>
+            @if (event.payloadTypeText) {
+              <span class="docs-component-event-type">{{ event.payloadTypeText }}</span>
+            }
+            @if (event.description) {
+              <p>{{ event.description }}</p>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+} @else {
+  <docs-children [blocks]="blocks" />
+}

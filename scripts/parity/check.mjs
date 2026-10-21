@@ -28,6 +28,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { Logging } from "@decaf-ts/logging";
+
 import {
   BASELINE_COMMIT,
   NORMALIZATION_VERSION,
@@ -39,6 +41,8 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SCRIPT_DIR, "../..");
 const requireFromRoot = createRequire(path.join(ROOT, "package.json"));
 const ts = requireFromRoot("typescript");
+
+const log = Logging.for("docaf parity");
 
 const BASELINE_FILE = path.join(ROOT, "tests/fixtures/parity/baseline.json");
 const MANIFEST = JSON.parse(
@@ -183,7 +187,7 @@ function checkFixture(TypeConverter, fixture) {
 
 function main() {
   if (!fs.existsSync(BASELINE_FILE)) {
-    console.error(
+    log.error(
       "parity: missing tests/fixtures/parity/baseline.json; run " +
         "npm run parity:baseline with the pinned BetterDocs checkout"
     );
@@ -191,7 +195,7 @@ function main() {
   }
   const baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, "utf8"));
   if (baseline.provenance?.baseline?.commit !== BASELINE_COMMIT) {
-    console.error(
+    log.error(
       `parity: baseline fixture provenance commit ` +
         `"${baseline.provenance?.baseline?.commit}" does not match the pin ` +
         `"${BASELINE_COMMIT}"`
@@ -201,7 +205,7 @@ function main() {
   if (
     baseline.provenance?.normalizationVersion !== NORMALIZATION_VERSION
   ) {
-    console.error(
+    log.error(
       `parity: normalization version mismatch (fixture ` +
         `${baseline.provenance?.normalizationVersion}, code ${NORMALIZATION_VERSION}); ` +
         `run npm run parity:baseline`
@@ -225,23 +229,23 @@ function main() {
     );
   }
 
-  console.log(
+  log.info(
     `parity: baseline ${BASELINE_COMMIT.slice(0, 8)} · ` +
       `${baseline.fixtures.length} fixtures · ${statements} statements · ` +
       `${blocks} normalized blocks`
   );
   if (failures.length) {
-    console.error(`parity: ${failures.length} mismatch(es)`);
-    for (const failure of failures) console.error(`  - ${failure}`);
+    log.error(`parity: ${failures.length} mismatch(es)`);
+    for (const failure of failures) log.error(`  - ${failure}`);
     process.exit(1);
   }
   if (improvements.length) {
-    console.log(
+    log.info(
       `parity: ${improvements.length} documented port-only improvement(s): ` +
         improvements.join(", ")
     );
   }
-  console.log("parity: OK");
+  log.info("parity: OK");
 }
 
 main();

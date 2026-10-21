@@ -1,0 +1,17 @@
+<div class="docs-body-layout" [class.docs-body-no-toc]="!tocBlock">
+  @if (sidebarBlock) {
+    <div class="docs-body-sidebar">
+      <ngx-decaf-component-renderer [tag]="sidebarBlock.tag" [globals]="sidebarBlock"></ngx-decaf-component-renderer>
+    </div>
+  }
+  <div class="docs-body-main">
+    @if (contentBlock) {
+      <ngx-decaf-component-renderer [tag]="contentBlock.tag" [globals]="contentBlock"></ngx-decaf-component-renderer>
+    }
+  </div>
+  @if (tocBlock) {
+    <div class="docs-body-aside">
+      <ngx-decaf-component-renderer [tag]="tocBlock.tag" [globals]="tocBlock"></ngx-decaf-component-renderer>
+    </div>
+  }
+</div>

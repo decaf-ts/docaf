@@ -42,6 +42,7 @@ async function upsertAll(
  * @param {DocsSnapshotV1} snapshot - Validated snapshot containing one record array per table.
  * @returns {Promise<void>} Resolves once every snapshot record has been written.
  * @throws {DocsSnapshotValidationError} When the snapshot fails schema or reference validation.
+ * @memberOf module:docaf
  */
 export async function hydrateDocsDatabase(
   database: DocsDatabase,

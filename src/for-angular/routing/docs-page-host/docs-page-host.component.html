@@ -1,0 +1,10 @@
+@if (layout) {
+  <ngx-decaf-model-renderer [model]="layout" />
+} @else if (error) {
+  <div class="docs-page-error" role="alert">
+    <h1>Documentation unavailable</h1>
+    <p>{{ error }}</p>
+  </div>
+} @else {
+  <div class="docs-page-loading" role="status">Loading documentation…</div>
+}

@@ -1,0 +1,36 @@
+.docs-tutorial {
+  max-width: 52rem;
+  color: #273444;
+  line-height: 1.7;
+}
+.docs-tutorial :first-child {
+  margin-top: 0;
+}
+.docs-tutorial h1,
+.docs-tutorial h2,
+.docs-tutorial h3 {
+  line-height: 1.25;
+  margin-top: 2rem;
+}
+.docs-tutorial code {
+  background: var(--docs-surface, #f7f8fa);
+  border: 1px solid var(--docs-border, #d7dbe0);
+  border-radius: 0.3rem;
+  padding: 0.05rem 0.3rem;
+}
+.docs-tutorial pre {
+  overflow: auto;
+  padding: 0.9rem;
+  border-radius: 0.5rem;
+  background: var(--docs-surface, #f7f8fa);
+  border: 1px solid var(--docs-border, #d7dbe0);
+}
+:host ::ng-deep .docs-table-wrap {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.docs-tutorial pre {
+  max-width: 100%;
+  box-sizing: border-box;
+}
