@@ -3,11 +3,10 @@
 ![GitHub language count](https://img.shields.io/github/languages/count/decaf-ts/docaf?style=plastic)
 ![GitHub top language](https://img.shields.io/github/languages/top/decaf-ts/docaf?style=plastic)
 
-[![Build & Test](https://github.com/decaf-ts/docaf/actions/workflows/nodejs-build-prod.yaml/badge.svg)](https://github.com/decaf-ts/docaf/actions/workflows/nodejs-build-prod.yaml)
+[![Build & Test](https://github.com/decaf-ts/docaf/actions/workflows/jest-coverage.yaml/badge.svg?event=pull_request)](https://github.com/decaf-ts/docaf/actions/workflows/jest-coverage.yaml)
 [![CodeQL](https://github.com/decaf-ts/docaf/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/decaf-ts/docaf/actions/workflows/codeql-analysis.yml)
 [![Snyk Analysis](https://github.com/decaf-ts/docaf/actions/workflows/snyk-analysis.yaml/badge.svg)](https://github.com/decaf-ts/docaf/actions/workflows/snyk-analysis.yaml)
-[![Pages builder](https://github.com/decaf-ts/docaf/actions/workflows/pages.yaml/badge.svg)](https://github.com/decaf-ts/docaf/actions/workflows/pages.yaml)
-[![Release](https://github.com/decaf-ts/docaf/actions/workflows/release-on-tag.yaml/badge.svg?event=release)](https://github.com/decaf-ts/docaf/actions/workflows/release-on-tag.yaml)
+[![Release](https://github.com/decaf-ts/docaf/actions/workflows/release-on-merge-pr.yml/badge.svg?event=pull_request)](https://github.com/decaf-ts/docaf/actions/workflows/release-on-merge-pr.yml)
 [![Docker Publish](https://github.com/decaf-ts/docaf/actions/workflows/docker-publish.yml/badge.svg?event=release)](https://github.com/decaf-ts/docaf/actions/workflows/docker-publish.yml)
 
 ![Open Issues](https://img.shields.io/github/issues/decaf-ts/docaf.svg)
