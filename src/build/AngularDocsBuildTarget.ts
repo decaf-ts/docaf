@@ -453,6 +453,7 @@ export class AngularDocsBuildTarget implements DocsBuildTarget {
     const tsconfig = {
       compileOnSave: false,
       compilerOptions: {
+        ignoreDeprecations: "6.0",
         baseUrl: ".",
         outDir: "./out-tsc",
         strict: false,
